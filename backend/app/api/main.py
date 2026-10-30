@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from fastapi.staticfiles import StaticFiles
 
 from app.detection.copernicus import make_scene_preview, process_sentinel1_scene, search_sentinel1
 from app.detection.sar import DetectionInputError, detect_sar_dark_features
@@ -387,3 +388,10 @@ async def search_automatic_ais_presence(request: AISPresenceRequest) -> dict[str
         return await search_gfw_presence(request.drift)
     except AISPresenceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+# Serve the frontend from the same origin as the API in hosted deployments.
+# Keep this mount last so it cannot shadow API or OpenAPI routes.
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+if FRONTEND_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

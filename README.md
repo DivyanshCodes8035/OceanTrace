@@ -23,6 +23,16 @@ Check the API at [http://localhost:8002/api/health](http://localhost:8002/api/he
 
 If the browser reports a connection error, confirm that both launcher windows are still running and that ports 8002 and 8080 are available. Opening frontend/index.html directly as a file:// URL does not start the API; use the launcher or the manual steps below. Leaflet and OpenStreetMap map tiles need internet access and may be unavailable if a network or tile service blocks requests.
 
+## Free hosted demo on Render
+
+The repository includes a `render.yaml` Blueprint for a single free Python web service. It serves the frontend and API from the same HTTPS address, and deploys new commits from `main` automatically after the Blueprint is connected to Render.
+
+1. Sign in to Render and connect your GitHub account.
+2. Choose **New → Blueprint**, select `DivyanshCodes8035/OceanTrace`, and apply the `render.yaml` configuration.
+3. Open the generated `onrender.com` URL. The Overview and Map pages and the API share that address.
+
+The free service sleeps after 15 minutes without traffic and can take about a minute to wake. Files saved by the API are temporary on this plan, so reviewed real-data cases should be downloaded or saved elsewhere. Real satellite and AIS features may also need service credentials; add them only through Render's environment settings, never to GitHub. See [Render's free-service limits](https://render.com/docs/free).
+
 ### Manual start
 
 Open two PowerShell terminals from the project folder. In the first:

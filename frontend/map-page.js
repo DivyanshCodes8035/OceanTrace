@@ -65,9 +65,13 @@ function fitToCase() {
 
 function apiRoot() {
   const configuredPort = new URLSearchParams(window.location.search).get("apiPort");
-  const port = configuredPort && /^\d{1,5}$/.test(configuredPort) && Number(configuredPort) <= 65535
-    ? configuredPort : "8002";
-  return "http://" + (window.location.hostname || "localhost") + ":" + port;
+  if (configuredPort && /^\d{1,5}$/.test(configuredPort) && Number(configuredPort) <= 65535) {
+    return window.location.protocol + "//" + (window.location.hostname || "localhost") + ":" + configuredPort;
+  }
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return window.location.protocol + "//" + window.location.hostname + ":8002";
+  }
+  return window.location.origin;
 }
 
 function candidatePositionAt(positions, timestamp) {
