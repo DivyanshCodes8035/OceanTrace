@@ -1,171 +1,184 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f5f7f3">
-    <title>WakeTrace | Cleanup response</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=15">
-    <link rel="stylesheet" href="cleanup-workflow.css?v=4">
-  </head>
-  <body class="response-page">
-    <div class="ambient-globe" aria-hidden="true"><div class="globe-shell"><div class="globe-texture"></div></div></div>
-    <a class="skip-link" href="#main">Skip to response workspace</a>
-    <header class="topbar">
-      <a class="brand" href="index.html" aria-label="WakeTrace overview"><span class="brand-mark" aria-hidden="true">≋</span><span>WakeTrace</span></a>
-      <nav class="top-nav" aria-label="Main navigation">
-        <a href="index.html">Overview</a><a href="map.html">Investigation</a><a class="nav-active" aria-current="page" href="cleanup-workflow.html?mode=demo">Response</a>
-      </nav>
-      <div class="header-context"><span class="status-dot" aria-hidden="true"></span> Response workspace</div>
-    </header>
-    <main class="page-shell cleanup-shell" id="main">
-      <section class="response-hero">
-        <div><div class="eyebrow">STEP 10 · RESPONSE WORKFLOW</div><h1>Assess the environment. Plan the response.</h1><p id="hero-description">Review conditions around a detected region and prepare a practical response plan.</p></div>
-        <div class="scenario-badge"><i></i><span><b id="mode-label">DEMO EXERCISE</b><small id="case-label">Toamasina · illustrative scenario</small></span></div>
-      </section>
-      <div class="jurisdiction-note"><strong>Demo note</strong><span id="jurisdiction-copy">Demo geometry is synthetic. Indian agencies are shown as examples; real alerts must go to the competent local authority.</span></div>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WakeTrace · Response exercise · Ennore, Chennai</title>
+<link rel="stylesheet" href="cleanup-workflow.css">
+</head>
+<body>
+<a class="skip" href="#guide">Skip to the guided steps</a>
 
-      <nav class="response-pipeline" aria-label="Response workflow stages">
-        <a href="#existing-analysis"><b>Analysis</b><span>Detected region and evidence</span></a><i aria-hidden="true">↓</i>
-        <a href="#response-engine"><b>Environmental assessment</b><span>Exposure and suggested actions</span></a><i aria-hidden="true">↓</i>
-        <a href="#response-centre"><b>Response plan</b><span>Tasks, report, coordination</span></a>
-      </nav>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span>WakeTrace</div>
+  <nav aria-label="Primary">
+    <!-- Adjust these hrefs if your Overview / Investigation files are named differently -->
+    <a href="index.html">Overview</a>
+    <a href="investigation.html">Investigation</a>
+    <a href="cleanup-workflow.html" aria-current="page">Response</a>
+  </nav>
+</header>
 
-      <section class="panel existing-analysis" id="existing-analysis" aria-labelledby="analysis-title">
-        <div class="panel-heading"><div><div class="eyebrow">01 · EXISTING OCEANTRACE ANALYSIS</div><h2 id="analysis-title">What the investigation found</h2><p class="muted">Summary passed from the completed Step 9 practice workflow.</p></div><span class="demo-only-tag" id="analysis-source-badge">SYNTHETIC DEMO</span></div>
-        <div class="analysis-metrics">
-          <article><span class="analysis-icon">◉</span><div><small>POSSIBLE SPILL FEATURES</small><b id="analysis-candidates">Loading prior analysis…</b><span id="analysis-case">Guided practice case</span></div></article>
-          <article><span class="analysis-icon">↶</span><div><small>ORIGIN ESTIMATE</small><b id="analysis-origin">Loading…</b><span>Backtracking is an uncertain search area, not a proven source.</span></div></article>
-          <article><span class="analysis-icon">⌖</span><div><small>VESSEL LEADS</small><b id="analysis-vessels">Loading…</b><span>Leads support review; they do not establish responsibility.</span></div></article>
-        </div>
-        <div class="region-assessment">
-          <div class="region-selector"><label for="region-select">Select a screened region</label><select id="region-select"><option value="">Waiting for Step 9 candidate geometry…</option></select><p id="region-description">The map and condition check will use the selected candidate’s coordinates.</p></div>
-          <div class="region-stat"><small>DETECTED REGION CENTRE</small><b id="region-coordinates">Not available</b><span>WGS84 latitude, longitude</span></div>
-          <div class="region-stat"><small>SCREENED RADAR FEATURE AREA</small><b id="region-area">Not available</b><span>Mapped dark-feature footprint, not oil volume</span></div>
-          <button id="assess-environment" class="primary-button" type="button" disabled>Read environmental conditions</button>
-        </div>
-        <div id="environment-status" class="environment-status" role="status" aria-live="polite">Complete Step 9 to load the detected-region geometry, then read current marine conditions.</div>
-        <div class="environment-readouts" id="environment-readouts" aria-live="polite">
-          <article><small>WAVE CONDITIONS</small><b id="environment-waves">Awaiting assessment</b><span id="environment-wave-period">Wave period · —</span></article>
-          <article><small>OCEAN CURRENT</small><b id="environment-current">Awaiting assessment</b><span id="environment-current-direction">Direction · —</span></article>
-          <article><small>WIND</small><b id="environment-wind">Awaiting assessment</b><span id="environment-wind-direction">Direction · —</span></article>
-          <article><small>NEAREST MAPPED COAST</small><b id="environment-coast">Awaiting assessment</b><span>OpenStreetMap coastline; check locally</span></article>
-          <article><small>SENSITIVE PLACE RECORDS</small><b id="environment-habitat">Awaiting assessment</b><span id="environment-habitat-note">OSM coverage can be incomplete</span></article>
-        </div>
-        <p class="environment-attribution" id="environment-attribution">Sources used for this check will appear here. Weather/model output is not a direct sensor reading or navigation forecast.</p>
-      </section>
+<main class="layout">
+  <section class="demo-intro" aria-labelledby="demo-title">
+    <div class="intro-copy"><div class="eyebrow">RESPONSE EXERCISE · ENNORE, CHENNAI</div><h1 id="demo-title">Cleanup workflow demo</h1><p>Explore an illustrative response sequence based on the historical Ennore before-and-after image.</p></div>
+    <img class="comparison-image" src="ennore-oil-spill-enhanced.png" alt="Satellite comparison of Ennore, Chennai, before the oil spill on 1 November 2023 and after the spill on 11 December 2023">
+    <button type="button" class="launch-demo" id="launch-demo">Simulate demo for this case <span aria-hidden="true">→</span></button>
+  </section>
+  <div class="simulation-workspace" id="simulation-workspace" hidden>
+  <!-- ============ SCENE ============ -->
+  <section class="scene-card" aria-label="Simulated scene">
+    <div class="scene-head">
+      <h2>Ennore · Chennai · Response exercise</h2>
+      <div class="chips">
+        <span class="chip">Historical photo reference</span>
+        <span class="chip warn">Illustrative scenario</span>
+      </div>
+    </div>
 
-      <section class="panel response-engine" id="response-engine" aria-labelledby="engine-title">
-        <div class="panel-heading"><div><div class="eyebrow">02 · NEW RESPONSE ENGINE · TRANSPARENT RULES</div><h2 id="engine-title">Turn the analysis into response priorities</h2><p class="muted">A cautious environmental screening from the selected detection region and available local context.</p></div><span class="engine-provisional">PROVISIONAL · NOT OPERATIONAL</span></div>
-        <div class="engine-readouts">
-          <article class="engine-readout risk"><small>ENVIRONMENTAL EXPOSURE PRIORITY</small><b id="engine-risk">Assessing…</b><span id="engine-risk-reason"></span></article>
-          <article class="engine-readout severity"><small>POTENTIAL IMPACT SEVERITY</small><b id="engine-severity">Not determined</b><span id="engine-severity-reason">A potential-impact category is not a measured spill size. The synthetic case has no confirmed volume or oil type.</span></article>
-          <article class="engine-readout confidence"><small>ASSESSMENT CONFIDENCE</small><b id="engine-confidence">Low · screening only</b><span id="engine-confidence-reason">Model conditions and mapped records support review; they do not verify oil or local impacts.</span></article>
-        </div>
-        <div class="engine-actions-wrap"><div><div class="metric-label">RECOMMENDED FIRST ACTIONS</div><p class="engine-explain">These are provisional priorities for discussion. The engine explains each recommendation; it does not issue instructions to crews.</p></div><ol class="engine-actions" id="engine-actions"></ol></div>
-        <p class="engine-rule-note"><b>Why is severity unconfirmed?</b> OceanTrace detects possible radar features, but the current case does not measure recoverable oil volume or confirm oil. The engine avoids inventing those values. A real response lead must validate the incident and consult the competent local authority before action.</p>
-      </section>
+    <div class="scene" id="scene" data-step="0">
+      <img id="photo" src="ennore-2023-scene.png" alt="Sentinel-2 satellite photo of the Ennore coast, Chennai, 11 December 2023, after the oil spill. Dark water east of the spit appears to contain oil.">
+      <canvas id="map-canvas" width="618" height="606" aria-hidden="true"></canvas>
 
-      <section id="response-centre" aria-labelledby="centre-title">
-      <div class="response-centre-heading"><div><div class="eyebrow">03 · RESPONSE CENTRE DASHBOARD</div><h2 id="centre-title">Coordinate the response plan</h2><p class="muted">Visualize example placements, assign tasks, prepare the incident report, and review notifications.</p></div></div>
-      <div class="response-grid">
-        <section class="panel response-map-card" aria-labelledby="response-map-title">
-          <div class="panel-heading"><div><div class="eyebrow">DETECTED REGION · PLANNING OVERLAY</div><h2 id="response-map-title">Cleanup response map</h2><p class="muted">The outline follows the selected detected feature. Resource placements are illustrative.</p></div><button id="advance-hour" class="secondary-button" type="button" disabled>Refresh environmental check <span aria-hidden="true">↗</span></button></div>
-          <div class="response-map-wrap"><div id="response-map" role="region" aria-label="Map of selected detected region and illustrative cleanup planning resources"></div><div class="map-live-chip"><i></i><span id="map-clock">WAITING FOR DETECTED REGION</span></div></div>
-          <div class="response-map-legend"><span><i class="legend-oil"></i>Detected candidate polygon</span><span><i class="legend-boom"></i>Illustrative boom line</span><span><i class="legend-resource"></i>S skimmer · A sorbent</span><span><i class="legend-coast"></i>Mapped sensitive place clue</span></div>
-          <div class="map-caption" id="map-caption">Complete Step 9 or load a reviewed case to show its detection geometry.</div>
-        </section>
+      <svg id="scene-svg" viewBox="0 0 618 606" preserveAspectRatio="none" role="group" aria-label="Interactive overlay: estimated slick boundary, assumed flow, boom and equipment">
+        <defs>
+          <filter id="goo" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="4" result="b"/><feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9"/></filter>
+        </defs>
+        <g id="g-oil"></g>
+        <g id="g-out"></g>
+        <g id="g-flow"></g>
+        <g id="g-boom"></g>
+        <g id="g-eq"></g>
+      </svg>
 
-        <aside class="response-controls">
-          <section class="panel recommendation-card" aria-labelledby="recommendation-title">
-            <div class="recommendation-tag"><span>✦</span> STARTING SUGGESTION · SYNTHETIC CASE</div>
-            <h2 id="recommendation-title">Start with confirmation, protection, and recovery planning</h2>
-            <p>Confirm the spill. Protect exposed shorelines with booms where suitable. Recover accessible oil with skimmers; use sorbents for small patches.</p>
-            <p class="recommendation-source">Example only. Follow incident conditions and local authority guidance. <a href="https://indiancoastguard.gov.in/sites/default/files/202408011002435750687OSDGuidelines2025.pdf" target="_blank" rel="noreferrer">Indian Coast Guard guidance ↗</a></p>
-            <button id="apply-suggested-plan" class="secondary-button" type="button">Use this example plan</button>
-            <details class="decision-checks"><summary>What responders must check before a real deployment</summary><p>Confirm the slick and oil properties, wind/waves/currents, water depth, sensitive wildlife and habitats, access and safety, equipment availability, recovered-oil storage, and the local response authority’s instructions.</p></details>
-          </section>
-          <section class="panel tactic-card">
-            <div class="panel-heading"><div><div class="eyebrow">PLAN CONTROLS · TACTIC</div><h2>What does each approach do?</h2><p class="muted">Choose one to see how the exercise plan changes.</p></div></div>
-            <div class="tactic-options" role="group" aria-label="Cleanup tactic">
-              <button class="tactic-option" type="button" data-tactic="protect" aria-pressed="false"><span class="tactic-icon">⌁</span><b>Protect the coast</b><small>Position booms to deflect slick away from the priority shoreline.</small></button>
-              <button class="tactic-option" type="button" data-tactic="recover" aria-pressed="false"><span class="tactic-icon">◉</span><b>Recover offshore</b><small>Concentrate skimmers and sorbents on surface recovery.</small></button>
-              <button class="tactic-option is-selected" type="button" data-tactic="balanced" aria-pressed="true"><span class="tactic-icon">⇄</span><b>Balanced response</b><small>Split equipment between shoreline protection and recovery.</small></button>
-            </div>
-            <div class="tactic-learning" id="tactic-learning" aria-live="polite"><b>Balanced response</b><span>Uses booms to help shield the priority coast while skimmers and sorbents are assigned to recover oil where conditions allow. It still depends on safe sea conditions and available equipment.</span></div>
-            <label class="sensitivity-toggle"><input id="sensitive-area" type="checkbox"><span><b>Flag habitat review priority</b><small>Analyst planning flag only; verify habitat exposure with authoritative local data.</small></span></label>
-            <label class="dispersant-toggle"><input id="dispersant" type="checkbox"><span><b>Consider dispersant use</b><small>Planning flag only. Requires competent authority approval and a Net Environmental Benefit Analysis; dispersants do not remove oil from the sea.</small></span></label>
-            <div class="tactic-feedback" id="tactic-feedback" aria-live="polite"></div>
-          </section>
+      <div class="badge" id="badge"></div>
 
-          <section class="panel equipment-card">
-            <div class="panel-heading"><div><div class="eyebrow">PLAN CONTROLS · RESOURCES</div><h2>Illustrative equipment allocation</h2></div><span class="resource-total" id="resource-total">12 demo units</span></div>
-            <div class="resource-row"><div class="resource-symbol boom-symbol">↔</div><div class="resource-copy"><b>Containment booms</b><small>Floating barrier · contains or deflects</small><details><summary>What does it do?</summary><p>A floating fence that can slow oil spread or shield a sensitive shore. It does not collect oil. Waves, wind, and currents can make it less effective.</p></details></div><button class="qty-button" data-resource="booms" data-change="-1" aria-label="Remove one boom team">−</button><output id="booms-qty">4</output><button class="qty-button" data-resource="booms" data-change="1" aria-label="Add one boom team">+</button></div>
-            <div class="resource-row"><div class="resource-symbol skim-symbol">◉</div><div class="resource-copy"><b>Skimmer units</b><small>Collects oil from the water surface</small><details><summary>What does it do?</summary><p>A vessel or device picks up the surface oil so it can be stored for disposal. It needs oil that can be reached and conditions safe enough to operate.</p></details></div><button class="qty-button" data-resource="skimmers" data-change="-1" aria-label="Remove one skimmer">−</button><output id="skimmers-qty">3</output><button class="qty-button" data-resource="skimmers" data-change="1" aria-label="Add one skimmer">+</button></div>
-            <div class="resource-row"><div class="resource-symbol sorb-symbol">▦</div><div class="resource-copy"><b>Sorbent kits</b><small>Soaks up small patches or leftover oil</small><details><summary>What does it do?</summary><p>Absorbent pads or booms soak up oil, a bit like a sponge. They are useful for smaller amounts or residue, then become contaminated material that must be collected and disposed of safely.</p></details></div><button class="qty-button" data-resource="sorbents" data-change="-1" aria-label="Remove one sorbent kit">−</button><output id="sorbents-qty">5</output><button class="qty-button" data-resource="sorbents" data-change="1" aria-label="Add one sorbent kit">+</button></div>
-            <div class="resource-footnote">Counts are exercise allocations, not confirmed inventory. Recovered oil and used sorbents need safe temporary storage and approved waste handling.</div>
-          </section>
-        </aside>
+      <div class="compass" id="compass" aria-hidden="true">
+        <svg viewBox="-30 -30 60 60" width="64" height="64">
+          <circle r="26" class="c-ring"/>
+          <text y="-15" class="c-n" text-anchor="middle">N</text>
+          <g id="compass-arrow"><path d="M0,-18 L6,8 L0,3 L-6,8 Z" class="c-arrow"/></g>
+        </svg>
+        <span>Drift (assumed)</span>
       </div>
 
-      <section class="response-outcomes" aria-label="Response plan status">
-        <article class="panel outcome-card"><span class="outcome-icon teal">⌁</span><div><small>CONTAINMENT PLAN</small><b id="containment-status">Shoreline boom line active</b><span id="containment-detail">4 boom teams assigned to the priority coast</span></div><i class="status-pill planned">PLANNED</i></article>
-        <article class="panel outcome-card"><span class="outcome-icon amber">◉</span><div><small>RECOVERY CAPACITY</small><b id="recovery-status">Surface recovery staged</b><span id="recovery-detail">3 skimmers · 5 sorbent kits assigned</span></div><i class="status-pill ready">READY</i></article>
-        <article class="panel outcome-card"><span class="outcome-icon coral">⌖</span><div><small>SHORELINE PRIORITY</small><b id="shoreline-status">Toamasina coastal segment</b><span id="shoreline-detail">Illustrative habitat priority · verify locally</span></div><i class="status-pill review">REVIEW</i></article>
-      </section>
-
-      <div class="operations-grid">
-        <section class="panel task-card">
-          <div class="panel-heading"><div><div class="eyebrow">RESPONSE TRACKING</div><h2>Response task board</h2><p class="muted">Update task status as crews report progress.</p></div><span class="task-progress-label" id="task-progress-label">0 of 5 complete</span></div>
-          <div class="task-progress"><i id="task-progress-bar"></i></div>
-          <div class="task-list" id="task-list">
-            <article class="task-row" data-task="confirm"><span class="task-index">01</span><div><b>Confirm spill boundary and direction</b><small>Incident lead · compare newest observation with drift guidance</small></div><select aria-label="Status: confirm spill boundary"><option value="planned">Planned</option><option value="active">In progress</option><option value="done">Complete</option></select></article>
-            <article class="task-row" data-task="booms"><span class="task-index">02</span><div><b>Stage boom line for coastal protection</b><small>Marine response team · check sea state and safe anchoring</small></div><select aria-label="Status: stage boom line"><option value="planned">Planned</option><option value="active">In progress</option><option value="done">Complete</option></select></article>
-            <article class="task-row" data-task="recover"><span class="task-index">03</span><div><b>Deploy skimmers and recovery vessels</b><small>Operations lead · confirm recovered-fluid storage capacity</small></div><select aria-label="Status: deploy skimmers"><option value="planned">Planned</option><option value="active">In progress</option><option value="done">Complete</option></select></article>
-            <article class="task-row" data-task="shoreline"><span class="task-index">04</span><div><b>Survey sensitive shoreline segment</b><small>Environmental unit · record wildlife and habitat observations</small></div><select aria-label="Status: survey shoreline"><option value="planned">Planned</option><option value="active">In progress</option><option value="done">Complete</option></select></article>
-            <article class="task-row" data-task="waste"><span class="task-index">05</span><div><b>Arrange recovered-oil and sorbent disposal</b><small>Safety and waste lead · use approved temporary handling route</small></div><select aria-label="Status: arrange waste handling"><option value="planned">Planned</option><option value="active">In progress</option><option value="done">Complete</option></select></article>
-          </div>
-          <p class="local-save-note">Task updates are saved in this browser on this device.</p>
-          <div class="incident-report-tools"><button id="generate-report" class="secondary-button" type="button">Generate incident report PDF</button><span>Creates a shareable PDF with the selected region, conditions, recommendations, agency roles, and task status.</span></div>
-          <details id="incident-report-preview" class="incident-report-preview"><summary>Preview generated report</summary><pre id="report-content">Generate a report to see the incident summary here.</pre></details>
-        </section>
-
-        <section class="panel agency-card">
-          <div class="panel-heading"><div><div class="eyebrow">COORDINATION & NOTICES</div><h2>Agency notification desk</h2><p class="muted">Real Indian agency roles · demo notices stay local.</p></div><span class="demo-only-tag">DEMO · NOT SENT</span></div>
-          <div class="agency-list" id="agency-list">
-            <label class="agency-row"><input type="checkbox" checked data-agency="icg"><span><b>Indian Coast Guard</b><small>Central Coordinating Authority for oil-spill response in India’s maritime zones; coordinates under NOSDCP.</small><a href="https://indiancoastguard.gov.in/marine-environment" target="_blank" rel="noreferrer">Role source ↗</a></span><i>DEMO</i></label>
-            <label class="agency-row"><input type="checkbox" checked data-agency="incois"><span><b>ESSO-INCOIS</b><small>Provides oil-spill trajectory advisory and decision support; not a cleanup operator.</small><a href="https://oosa.incois.gov.in/" target="_blank" rel="noreferrer">Role source ↗</a></span><i>DEMO</i></label>
-            <label class="agency-row"><input type="checkbox" checked data-agency="port"><span><b>Relevant Port Authority</b><small>Port authorities handle response within port limits and coordinate local resources.</small><a href="https://indiancoastguard.gov.in/sites/default/files/202408011002435750687OSDGuidelines2025.pdf" target="_blank" rel="noreferrer">Guidelines ↗</a></span><i>DEMO</i></label>
-            <label class="agency-row"><input type="checkbox" checked data-agency="coastal"><span><b>Coastal State / UT Authorities</b><small>Coordinate shoreline response and local environmental protection when threatened.</small><a href="https://indiancoastguard.gov.in/WriteReadData/bookpdf/201512281221565793127NOSDCPCGBR771.pdf" target="_blank" rel="noreferrer">NOSDCP ↗</a></span><i>DEMO</i></label>
-            <label class="agency-row"><input type="checkbox" checked data-agency="navy"><span><b>Indian Navy / Indian Air Force (support)</b><small>May provide aerial surveillance, logistics, or communications support when requested through the national response coordination process.</small><a href="https://indiancoastguard.gov.in/WriteReadData/bookpdf/201512281221565793127NOSDCPCGBR771.pdf" target="_blank" rel="noreferrer">NOSDCP ↗</a></span><i>DEMO</i></label>
-          </div>
-          <div class="notification-preview" id="notification-preview" aria-live="polite"><span class="preview-dot"></span><div><b>Ready to prepare a simulated notice</b><small>Select the agencies for this exercise, then generate a preview. No email or text message will be sent.</small></div></div>
-          <button id="prepare-notice" class="secondary-button notice-button" type="button">Generate demo notification preview</button>
-          <div class="live-notification">
-            <button id="live-toggle" class="text-button" type="button" aria-expanded="false">Set up delivery for a real, authorized incident <span aria-hidden="true">＋</span></button>
-            <div id="live-panel" hidden>
-              <p class="live-warning">Live delivery is disabled until an administrator configures mail settings and a verified recipient allowlist on the server. Never send Indian agency notices for the Madagascar demo.</p>
-              <label>Verified case ID<input id="live-case" type="text" maxlength="64" placeholder="Saved real case ID"></label>
-              <button id="load-live-case" class="secondary-button" type="button">Verify saved case and switch to live</button>
-              <p id="case-verify-status" class="live-status" role="status" aria-live="polite">Load a saved real-data case first. Synthetic practice cases cannot be used for live notifications.</p>
-              <label>Verified incident jurisdiction<input id="live-jurisdiction" type="text" maxlength="120" placeholder="Country / coastal authority area"></label>
-              <label>Notification summary / requested coordination<textarea id="live-summary" rows="3" maxlength="1000" placeholder="Briefly describe the verified observation and the coordination requested."></textarea></label>
-              <label>Approved recipient addresses <small>(must exactly match the server allowlist)</small><textarea id="live-recipients" rows="2" placeholder="authority@example.org, response@example.org"></textarea></label>
-              <label>Authorized approver name<input id="live-approver" type="text" maxlength="100" placeholder="Name of approving officer"></label>
-              <label>Administrator-issued approval code<input id="live-approval-code" type="password" maxlength="200" autocomplete="off" placeholder="Required by the mail server"></label>
-              <label class="confirm-check"><input id="live-confirm" type="checkbox"><span>I confirm this is a verified live incident, these recipients are authorized for this jurisdiction, and I approve sending this notice.</span></label>
-              <button id="send-live" class="primary-button" type="button">Send approved notification</button>
-              <p id="live-status" class="live-status" role="status" aria-live="polite">No notification has been sent.</p>
-            </div>
-          </div>
-          <p class="agency-footnote">Agency roles are based on <a href="https://indiancoastguard.gov.in/marine-environment" target="_blank" rel="noreferrer">Indian Coast Guard guidance</a> and <a href="https://oosa.incois.gov.in/" target="_blank" rel="noreferrer">INCOIS OOSA</a>. Response choices are incident-specific; see <a href="https://oceanservice.noaa.gov/education/tutorial-coastal/oil-spills/os06-sub-01.html" target="_blank" rel="noreferrer">NOAA's oil spill cleanup overview</a> for a plain-language methods summary. This page does not claim authority over Madagascar incidents.</p>
-        </section>
+      <div class="inset" id="inset">
+        <svg viewBox="0 0 220 130" role="img" aria-label="Cutaway of a floating boom: float above the waterline, skirt and ballast chain below. Not to scale.">
+          <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c6f7c"/><stop offset="1" stop-color="#06222e"/></linearGradient></defs>
+          <rect width="220" height="130" fill="#071a24"/>
+          <rect y="48" width="220" height="82" fill="url(#wg)"/>
+          <path d="M0 48 Q14 43 28 48 T56 48 T84 48 T112 48 T140 48 T168 48 T196 48 T224 48" fill="none" stroke="#8ff3e6" stroke-width="1.5"/>
+          <ellipse cx="38" cy="52" rx="22" ry="3.5" fill="#050a0d" opacity=".85"/>
+          <rect x="96" y="36" width="42" height="20" rx="10" fill="#35e0cf" stroke="#05383a" stroke-width="1.5"/>
+          <path d="M104 40 H130" stroke="#bdfaf3" stroke-width="1.5" opacity=".7"/>
+          <path d="M117 56 V104" stroke="#d7e4ea" stroke-width="1" stroke-dasharray="2 2"/>
+          <path d="M117 56 H122 V102 H117 Z" fill="#0a3a48" stroke="#59d3c6" stroke-width="1"/>
+          <circle cx="119" cy="108" r="2.5" fill="#d7e4ea"/><circle cx="119" cy="114" r="2.5" fill="#d7e4ea"/><circle cx="119" cy="120" r="2.5" fill="#d7e4ea"/>
+          <text x="146" y="34" class="in-t">Float (freeboard above water)</text>
+          <text x="146" y="82" class="in-t">Skirt below the waterline</text>
+          <text x="146" y="122" class="in-t">Ballast chain</text>
+          <text x="6" y="16" class="in-t">Oil side →</text>
+          <text x="6" y="126" class="in-t dim">Cutaway · not to scale</text>
+        </svg>
       </div>
-      </section>
-      <footer class="page-footer"><a href="map.html">← Return to investigation and Step 9</a><span>Recovery methods need incident-specific safety and environmental review. Mechanical recovery is prioritized in this exercise; dispersant and in-situ burning are not automatic actions.</span></footer>
-    </main>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="cleanup-workflow.js?v=4"></script>
-  </body>
+
+      <div class="attrib">Source imagery: Copernicus Sentinel / Sentinel Hub · 11 Dec 2023 (after) · Historical photo, not live</div>
+    </div>
+
+    <div class="scene-foot">
+      <div class="seg" role="group" aria-label="Base layer">
+        <button type="button" class="seg-btn on" data-base="map" aria-pressed="true">Map-style render</button>
+        <button type="button" class="seg-btn" data-base="photo" aria-pressed="false">Source photo</button>
+      </div>
+      <p class="note" id="map-note">Map-style render is generated in your browser from the photo’s colours. It is a visual aid, not survey data.</p>
+      <ul class="legend" aria-label="Legend">
+        <li><svg width="30" height="12"><line x1="1" y1="6" x2="29" y2="6" class="lg-out"/></svg>Estimated slick boundary</li>
+        <li><svg width="30" height="12"><line x1="1" y1="6" x2="22" y2="6" class="lg-flow"/><path d="M22 1 L29 6 L22 11Z" fill="#2ee6d0"/></svg>Assumed flow</li>
+        <li><svg width="30" height="12"><rect x="1" y="2" width="12" height="8" rx="4" fill="#35e0cf" stroke="#05383a"/><rect x="16" y="2" width="12" height="8" rx="4" fill="#35e0cf" stroke="#05383a"/></svg>Boom (flexible barrier)</li>
+        <li><svg width="18" height="16"><rect x="1" y="2" width="16" height="12" rx="3" fill="#8fd0ff" stroke="#05263a"/><text x="9" y="12" text-anchor="middle" font-size="10" font-weight="700" fill="#05263a">S</text></svg>Skimmer</li>
+        <li><svg width="18" height="16"><circle cx="9" cy="8" r="7" fill="#d6a6ff" stroke="#2a0f45"/><text x="9" y="12" text-anchor="middle" font-size="10" font-weight="700" fill="#2a0f45">A</text></svg>Sorbent</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ GUIDE ============ -->
+  <aside class="guide" id="guide" aria-label="Guided steps">
+    <p class="disclaimer"><strong>Educational simulation.</strong> Built on a historical photo. It is not a reconstruction of the real response, not an operational plan, and does not direct responders. Nothing here is sent to any agency.</p>
+
+    <ol class="stepper" id="stepper">
+      <li><button type="button" data-go="0" aria-label="Step 1: Mark the apparent slick"><b>1</b><span>Slick</span></button></li>
+      <li><button type="button" data-go="1" aria-label="Step 2: Set water movement"><b>2</b><span>Flow</span></button></li>
+      <li><button type="button" data-go="2" aria-label="Step 3: Simulate containment booms"><b>3</b><span>Booms</span></button></li>
+      <li><button type="button" data-go="3" aria-label="Step 4: Position skimmers and sorbents"><b>4</b><span>Recovery</span></button></li>
+      <li><button type="button" data-go="4" aria-label="Step 5: Replay the illustrative cleanup"><b>5</b><span>Replay</span></button></li>
+    </ol>
+    <div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+
+    <!-- STEP 1 -->
+    <section class="panel" data-panel="0" aria-labelledby="h0">
+      <h2 id="h0">Step 1 · Mark the apparent slick</h2>
+      <div class="tags"><span class="tag photo">Photo reference</span><span class="tag assume">Your estimate</span></div>
+      <p>The dark shaded area inside the dotted amber line is an <strong>estimated visual outline</strong> of the water that appears to contain oil, drawn over a map-style version of the photo. Drag the handles to reshape it, or focus a handle and use the arrow keys.</p>
+      <p class="fine">This is a visual estimate from a low-resolution photo. It is not automated or validated oil detection and not a measured spill boundary.</p>
+      <div class="row"><button type="button" class="btn" id="reset-out">Reset boundary</button></div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="panel" data-panel="1" aria-labelledby="h1" hidden>
+      <h2 id="h1">Step 2 · Set water movement</h2>
+      <div class="tags"><span class="tag assume">Assumed value</span><span class="tag sim">Illustrative arrows</span></div>
+      <p>The arrows sit at the <strong>leading edge</strong> of the patch and show where surface oil could be pushed next. Wind and current are combined into one <strong>assumed</strong> drift. It is not a measurement from Ennore in December 2023. The image is assumed north-up.</p>
+      <div class="ctl"><label for="drift-dir">Assumed drift direction (wind + current)</label><output id="o-dir" for="drift-dir"></output>
+        <input type="range" id="drift-dir" min="0" max="359" step="1" value="285"></div>
+      <p class="fine">Drift speed is held at an assumed 0.4 kn. Actual movement depends on local tide, current, wind, bathymetry, shoreline geometry and weather.</p>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="panel" data-panel="2" aria-labelledby="h2" hidden>
+      <h2 id="h2">Step 3 · Simulate containment booms</h2>
+      <div class="tags"><span class="tag sim">Boom placement example</span></div>
+      <p>A <strong>flexible floating boom</strong> is laid around the entire edge of the apparent patch. It is made of linked sections with connectors and a skirt below the waterline (see the cutaway). Placement is automatic and follows your outline from Step 1.</p>
+      <p class="fine"><strong>Booms contain or deflect surface oil; they do not remove it.</strong> A full enclosure is rarely practical in real conditions. Suitability depends on current speed, waves, freeboard, skirt depth, anchoring, deployment angle and safe access. This layout is not proven effective or safe.</p>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="panel" data-panel="3" aria-labelledby="h3" hidden>
+      <h2 id="h3">Step 4 · Position skimmers and sorbents</h2>
+      <div class="tags"><span class="tag sim">Equipment layout</span></div>
+      <p><strong>Skimmers (S)</strong> and <strong>sorbents (A)</strong> are placed at the <strong>front end</strong> of the patch, in the direction of drift, so oil is recovered as it arrives instead of being pushed onward. Skimmers recover surface oil into temporary storage. Sorbents absorb small patches and must themselves be recovered as contaminated waste. Booms only contain; these recover.</p>
+      <p class="fine">You can drag a marker, or focus it and use the arrow keys, to try another position. Dispersants are not part of this exercise: they move oil droplets into the water column, can increase underwater exposure, and depend on oil type, conditions, ecological trade-offs and approval by the competent authority.</p>
+      <div class="row"><button type="button" class="btn" id="reset-eq">Reset to front end</button></div>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="panel" data-panel="4" aria-labelledby="h4" hidden>
+      <h2 id="h4">Step 5 · Replay the illustrative cleanup</h2>
+      <div class="tags"><span class="tag sim">Cleanup replay</span></div>
+      <div class="row">
+        <button type="button" class="btn primary" id="play">Play</button>
+        <button type="button" class="btn" id="replay">Replay</button>
+      </div>
+      <div class="ctl"><label for="scrub">Replay progress</label>
+        <input type="range" id="scrub" min="0" max="299" step="1" value="0"></div>
+      <fieldset class="uses"><legend>Include in replay</legend>
+        <label class="check"><input type="checkbox" id="use-boom" checked> Boom</label>
+        <label class="check"><input type="checkbox" id="use-skim" checked> Skimmers</label>
+        <label class="check"><input type="checkbox" id="use-sorb" checked> Sorbents</label>
+      </fieldset>
+      <p class="status" id="status" aria-live="polite"></p>
+      <p class="fine">The dark patch shrinking is a <strong>conceptual metaphor for recovery</strong>. No removal amounts, rates or effectiveness are modelled or implied, and some oil may escape or reach shore in any layout.</p>
+    </section>
+
+    <div class="nav">
+      <button type="button" class="btn" id="prev">Back</button>
+      <button type="button" class="btn primary" id="next">Next</button>
+    </div>
+    <div class="row resets"><button type="button" class="btn ghost" id="reset-all">Reset entire exercise</button></div>
+    <div class="sr" id="live" aria-live="polite"></div>
+  </aside>
+  </div>
+</main>
+
+<script src="cleanup-workflow.js"></script>
+</body>
 </html>

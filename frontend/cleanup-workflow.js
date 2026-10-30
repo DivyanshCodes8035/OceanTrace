@@ -1,516 +1,243 @@
+/* WakeTrace · Response exercise · Ennore (illustrative simulation on a historical photo)
+   Self-contained. Overlay coordinates live in the 618×606 viewBox of the after-spill image. */
 (() => {
-  "use strict";
-  const $ = (id) => document.getElementById(id);
-  let demoMode = true;
-  let loadedLiveCase = null;
-  let analysisContext = null;
-  const STORAGE_KEY = "waketrace-cleanup-workflow-v3";
-  const state = {
-    tactic: "balanced",
-    sensitive: false,
-    dispersant: false,
-    resources: { booms: 4, skimmers: 3, sorbents: 5 },
-    tasks: { confirm: "planned", booms: "planned", recover: "planned", shoreline: "planned", waste: "planned" },
-  };
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (saved) {
-      if (saved.resources && typeof saved.resources === "object") for (const k of Object.keys(state.resources)) state.resources[k] = Math.max(0, Math.min(12, Number(saved.resources[k]) || 0));
-      if (saved.tasks && typeof saved.tasks === "object") for (const k of Object.keys(state.tasks)) if (["planned", "active", "done"].includes(saved.tasks[k])) state.tasks[k] = saved.tasks[k];
-      state.sensitive = saved.sensitive !== false;
-      state.dispersant = saved.dispersant === true;
-    }
-  } catch { /* storage can be disabled; the workflow still works for this page view */ }
-  try { analysisContext = JSON.parse(sessionStorage.getItem("waketrace-response-context") || "null"); } catch { /* optional handoff from the guided demo */ }
-  if (!analysisContext) {
-    analysisContext = {
-      synthetic: true,
-      caseLabel: "Offline sample · preview only",
-      candidateCount: 1,
-      location: "Illustrative practice-scene coordinates",
-      originEstimate: false,
-      vesselLeadCount: 0,
-      detectedRegions: [{
-        label: "Sample feature · preview only",
-        screeningScore: null,
-        geometry: { type: "Polygon", coordinates: [[[57.672, -20.372], [57.688, -20.372], [57.692, -20.383], [57.681, -20.392], [57.670, -20.384], [57.672, -20.372]]] },
-      }],
-    };
-  }
-  const persist = () => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* optional local persistence */ }
-  };
+'use strict';
+const NS = 'http://www.w3.org/2000/svg', W = 618, H = 606, FR = 480, FPS = 18, SPD = .4;
+const $ = s => document.querySelector(s);
+const launchButton = $('#launch-demo'), workspace = $('#simulation-workspace');
+launchButton.addEventListener('click', () => {
+  workspace.hidden = false;
+  launchButton.textContent = 'Demo started';
+  launchButton.disabled = true;
+  workspace.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+});
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const el = (t, a, p) => { const n = document.createElementNS(NS, t); for (const k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; };
+const rad = d => d * Math.PI / 180, copy = o => JSON.parse(JSON.stringify(o));
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const svg = $('#scene-svg'), scene = $('#scene');
+const G = { oil: $('#g-oil'), out: $('#g-out'), flow: $('#g-flow'), boom: $('#g-boom'), eq: $('#g-eq') };
 
-  $("mode-label").textContent = demoMode ? "DEMO EXERCISE" : "LIVE WORKSPACE · REVIEW REQUIRED";
-  $("case-label").textContent = analysisContext?.caseLabel || (analysisContext?.caseId ? `Saved case · ${analysisContext.caseId}` : "Waiting for Step 9 detection");
-  if (window.location.protocol === "file:") {
-    $("jurisdiction-copy").textContent = "Preview only. Start WakeTrace.bat and open localhost:8080 for detection handoff, environmental checks, and PDF reports.";
-    document.querySelector(".jurisdiction-note strong").textContent = "File preview";
-  }
+const DEF_OUT = [[205,263],[262,236],[345,220],[450,222],[540,245],[592,290],[608,358],[575,388],[533,380],[512,430],[532,480],[540,520],[505,560],[440,552],[385,572],[378,520],[425,462],[372,412],[352,350],[385,288],[300,262],[232,300]];
+const TITLES = ['Mark the apparent slick','Set water movement conditions','Simulate containment booms','Position skimmers and sorbents','Replay the illustrative cleanup'];
+const BADGES = ['Estimated slick boundary · your estimate','Drift assumed · illustrative arrows','Boom placement example · illustrative','Equipment at the front end · illustrative','Cleanup replay · illustrative only'];
+const S = { step:0, out:copy(DEF_OUT), dir:285, eq:null, eqKey:'', eqCustom:false, sel:-1, use:{boom:true,skim:true,sorb:true}, f:0, playing:false, dirty:true };
+let K = 1, mask = null, drag = null, focusKey = null, sim = null, parts = [], lastStatus = '', geoC = null;
 
-  const map = L.map("response-map", { zoomControl: true, scrollWheelZoom: false, attributionControl: false }).setView([0, 0], 2);
-  const mapAttribution = L.control.attribution({ prefix: false }).addTo(map);
-  mapAttribution.addAttribution("© OpenStreetMap contributors");
-  const coordinateGrid = L.gridLayer({ tileSize: 256, noWrap: true });
-  coordinateGrid.createTile = (coords) => {
-    const canvas = document.createElement("canvas"); canvas.width = 256; canvas.height = 256;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#f3f6f1"; ctx.fillRect(0, 0, 256, 256);
-    ctx.strokeStyle = "rgba(89, 116, 103, .13)"; ctx.lineWidth = 1;
-    for (let point = 0; point <= 256; point += 64) {
-      ctx.beginPath(); ctx.moveTo(point, 0); ctx.lineTo(point, 256); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, point); ctx.lineTo(256, point); ctx.stroke();
-    }
-    const origin = map.unproject(L.point(coords.x * 256, coords.y * 256), coords.z);
-    ctx.fillStyle = "rgba(70, 94, 81, .65)"; ctx.font = "11px system-ui, sans-serif";
-    ctx.fillText(`${origin.lat.toFixed(2)}°, ${origin.lng.toFixed(2)}°`, 8, 16);
-    return canvas;
-  };
-  coordinateGrid.addTo(map);
-  const planLayer = L.layerGroup().addTo(map);
-  let selectedRegion = null, regionCenter = null, regionAreaKm2 = null, environmentData = null;
-  const EARTH_RADIUS_KM = 6371.0088;
-  function polygonRings(geometry) {
-    if (!geometry) return [];
-    if (geometry.type === "Polygon") return [geometry.coordinates || []];
-    if (geometry.type === "MultiPolygon") return geometry.coordinates || [];
-    return [];
-  }
-  function ringAreaKm2(ring) {
-    if (!Array.isArray(ring) || ring.length < 4) return 0;
-    let sum = 0;
-    for (let i = 0; i < ring.length - 1; i++) {
-      const [lon1, lat1] = ring[i], [lon2, lat2] = ring[i + 1];
-      sum += (lon2 - lon1) * Math.PI / 180 * (2 + Math.sin(lat1 * Math.PI / 180) + Math.sin(lat2 * Math.PI / 180));
-    }
-    return Math.abs(sum * EARTH_RADIUS_KM * EARTH_RADIUS_KM / 2);
-  }
-  function geometryAreaKm2(geometry) {
-    return polygonRings(geometry).reduce((total, rings) => total + Math.max(0, ringAreaKm2(rings[0]) - rings.slice(1).reduce((sum, ring) => sum + ringAreaKm2(ring), 0)), 0);
-  }
-  function geometryCenter(geometry) {
-    const points = polygonRings(geometry).flatMap((rings) => (rings[0] || []).slice(0, -1)).filter((p) => Array.isArray(p) && p.length >= 2);
-    if (!points.length) return null;
-    return [points.reduce((sum, p) => sum + Number(p[1]), 0) / points.length,
-      points.reduce((sum, p) => sum + Number(p[0]), 0) / points.length];
-  }
-  function prettyArea(value) { return value == null || !Number.isFinite(value) ? "Not available" : `${value < .01 ? value.toFixed(5) : value < 1 ? value.toFixed(3) : value.toFixed(2)} km²`; }
-  function selectDetectedRegion(index) {
-    const regions = analysisContext?.detectedRegions || [];
-    selectedRegion = regions[Number(index)] || null;
-    regionCenter = selectedRegion ? geometryCenter(selectedRegion.geometry) : null;
-    regionAreaKm2 = selectedRegion ? geometryAreaKm2(selectedRegion.geometry) : null;
-    environmentData = null;
-    $("region-coordinates").textContent = regionCenter ? `${regionCenter[0].toFixed(5)}, ${regionCenter[1].toFixed(5)}` : "Not available";
-    $("region-area").textContent = prettyArea(regionAreaKm2);
-    $("region-description").textContent = selectedRegion
-      ? `${selectedRegion.label} · radar screening score ${selectedRegion.screeningScore ?? "not recorded"} / 100. It is a possible dark feature, not confirmed oil.`
-      : "No polygon geometry was passed from the detection step.";
-    if (analysisContext?.caseLabel === "Offline sample · preview only" && selectedRegion) {
-      $("region-description").textContent = "Sample polygon for preview only. Run the guided demo through Step 9 to replace it with a screened candidate.";
-    }
-    $("assess-environment").disabled = !regionCenter;
-    $("advance-hour").disabled = !regionCenter;
-    $("environment-status").textContent = regionCenter ? "Ready to request modeled marine conditions and nearby mapped coastline/habitat clues for this feature." : "No detected-region geometry is available for an environmental lookup.";
-    renderEnvironment(); renderMap(); updateEngine();
-    if (regionCenter) map.fitBounds(L.geoJSON(selectedRegion.geometry).getBounds(), { padding: [55, 55], maxZoom: 12 });
-  }
-  function initializeRegions() {
-    const select = $("region-select");
-    const regions = analysisContext?.detectedRegions || [];
-    select.replaceChildren();
-    regions.forEach((region, index) => {
-      const option = document.createElement("option"); option.value = String(index); option.textContent = region.label || `Possible feature ${index + 1}`; select.append(option);
-    });
-    if (!regions.length) { const option = document.createElement("option"); option.value = ""; option.textContent = "No region geometry passed from Step 9"; select.append(option); }
-    select.disabled = !regions.length;
-    select.addEventListener("change", () => selectDetectedRegion(select.value));
-    selectDetectedRegion(regions.length ? 0 : "");
-  }
-  const tacticMessages = {
-    protect: "Booms prioritize deflection and protection near the mapped shoreline. Skimming remains available offshore when conditions allow.",
-    recover: "Skimmers and sorbents prioritize surface recovery offshore. Shoreline protection coverage is reduced in this exercise.",
-    balanced: "Booms protect the priority coast while skimmers and sorbents focus on accessible surface oil.",
-  };
-  const tacticExplanations = {
-    protect: ["Protect the coast", "Booms are placed as a floating barrier to help keep or redirect oil away from a selected shoreline. They slow spread; they do not remove oil. Skimming can still collect accessible oil."],
-    recover: ["Recover offshore", "Skimmers collect oil from the water surface and sorbents absorb smaller patches or residue. This emphasizes collection, but a separate plan is still needed to protect threatened shores and store recovered oil."],
-    balanced: ["Balanced response", "Uses booms to help shield the priority coast while skimmers and sorbents are assigned to recover oil where conditions allow. It still depends on safe sea conditions and available equipment."],
-  };
-  function renderAnalysisSummary() {
-    const c = analysisContext;
-    $("analysis-candidates").textContent = c?.caseLabel === "Offline sample · preview only" ? "Sample polygon · preview only" : c?.candidateCount == null ? "No prior summary loaded" : `${c.candidateCount} possible feature${c.candidateCount === 1 ? "" : "s"} screened`;
-    $("analysis-case").textContent = c?.caseLabel || (c?.caseId ? `Saved case · ${c.caseId}` : "Complete Step 9 to pass a case summary here");
-    $("analysis-origin").textContent = c?.originEstimate == null ? "Not available" : c.originEstimate ? "Possible origin area estimated" : "No origin area returned";
-    $("analysis-vessels").textContent = c?.vesselLeadCount == null ? "Not available" : `${c.vesselLeadCount} vessel lead${c.vesselLeadCount === 1 ? "" : "s"} for review`;
-    $("analysis-source-badge").textContent = c?.caseLabel === "Offline sample · preview only" ? "OFFLINE PREVIEW" : c?.synthetic === false ? "REAL REVIEW · NOT CONFIRMED" : "SYNTHETIC DEMO";
-    if (c?.observationTime) $("analysis-case").textContent = `${c.caseLabel || (c.caseId ? `Saved case · ${c.caseId}` : "Completed analysis")} · ${c.observationTime}`;
-  }
-  function renderEnvironment() {
-    const d = environmentData;
-    const marine = d?.marine || {}, wind = d?.wind || {}, coastal = d?.coastal_context || {};
-    $("environment-waves").textContent = d ? `${marine.wave_height_m ?? "—"} m` : "Awaiting assessment";
-    $("environment-wave-period").textContent = `Wave period · ${marine.wave_period_s ?? "—"} s`;
-    $("environment-current").textContent = d ? `${marine.current_velocity ?? "—"} ${marine.current_velocity_unit || ""}`.trim() : "Awaiting assessment";
-    $("environment-current-direction").textContent = `Direction · ${marine.current_direction_deg ?? "—"}°`;
-    $("environment-wind").textContent = d ? `${wind.speed_ms ?? "—"} m/s · gust ${wind.gusts_ms ?? "—"}` : "Awaiting assessment";
-    $("environment-wind-direction").textContent = `Direction · ${wind.direction_deg ?? "—"}°`;
-    $("environment-coast").textContent = d ? (coastal.nearest_coast_km == null ? "No mapped line returned" : `${coastal.nearest_coast_km} km`) : "Awaiting assessment";
-    const sites = coastal.mapped_sensitive_sites || [];
-    $("environment-habitat").textContent = d ? (sites.length ? `${sites.length} nearby mapped record${sites.length === 1 ? "" : "s"}` : "No nearby record returned") : "Awaiting assessment";
-    $("environment-habitat-note").textContent = sites.length ? `${sites.slice(0, 2).map((site) => `${site.name} (~${site.distance_km} km to mapped center)`).join(" · ")} · approximate` : "OpenStreetMap coverage can be incomplete";
-    $("environment-attribution").textContent = d ? `Model time ${marine.time || wind.time || "not supplied"} UTC · Open-Meteo marine/weather models · OpenStreetMap mapped coast and habitat clues. ${d.limitations || "Check local conditions and authoritative habitat data."}` : "Sources used for this check will appear here. Weather/model output is not a direct sensor reading or navigation forecast.";
-  }
-  async function assessSelectedEnvironment() {
-    if (!regionCenter) return;
-    if (window.location.protocol === "file:") {
-      $("environment-status").textContent = "This page was opened as a file. Start WakeTrace.bat, then open the Response page from http://localhost:8080 to load environmental conditions.";
-      return;
-    }
-    const buttons = [$("assess-environment"), $("advance-hour")];
-    buttons.forEach((button) => { button.disabled = true; });
-    $("environment-status").textContent = "Loading modeled waves, current, wind, and nearby mapped coastal context…";
-    try {
-      const response = await fetch("http://127.0.0.1:8002/api/environment/assess", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: regionCenter[0], longitude: regionCenter[1] }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail || `Environmental service returned ${response.status}.`);
-      environmentData = data;
-      const modelCell = data.location ? ` Nearest marine model cell: ${Number(data.location.latitude).toFixed(3)}, ${Number(data.location.longitude).toFixed(3)}.` : "";
-      $("environment-status").textContent = `Conditions requested for ${regionCenter[0].toFixed(4)}, ${regionCenter[1].toFixed(4)}.${modelCell} Use as model-based decision support; confirm with local responders.`;
-      renderEnvironment(); updateEngine(); renderMap();
-    } catch (error) {
-      environmentData = null;
-      $("environment-status").textContent = `Could not load conditions: ${error.message || "check that the WakeTrace server and internet connection are available."}`;
-      renderEnvironment(); updateEngine();
-    } finally {
-      buttons[0].disabled = !regionCenter;
-      buttons[1].disabled = !regionCenter;
-    }
-  }
-  function updateEngine() {
-    const list = $("engine-actions");
-    list.replaceChildren();
-    let actions;
-    if (!analysisContext) {
-      $("engine-risk").textContent = "Waiting for Step 9 analysis";
-      $("engine-risk-reason").textContent = "Run the guided demo through Step 9 to pass its possible-slick, origin, and vessel-lead summary into this engine.";
-      $("engine-severity").textContent = "Not assessed · no case loaded";
-      $("engine-severity-reason").textContent = "No completed upstream analysis is available to assess even the illustrative coastal exposure.";
-      actions = [["Complete the upstream analysis", "Open the investigation map, run the guided practice case, and finish Step 9."], ["Confirm a possible spill", "A radar feature is a screening lead, not proof of oil. Human review and corroborating observations are needed."], ["Do not dispatch from this screen", "No verified incident data or operational assessment is loaded yet."]];
-    } else if (!selectedRegion || !regionCenter) {
-      $("engine-risk").textContent = "No mapped candidate selected";
-      $("engine-risk-reason").textContent = "A response assessment needs the geometry of a screened region; a candidate count alone is not a location.";
-      $("engine-severity").textContent = "Not assessed · no region geometry";
-      $("engine-severity-reason").textContent = "The response page did not receive a selected detection boundary from the investigation.";
-      actions = [["Return to detection review", "Select a screened region with a mapped polygon before assessing the environment."], ["Confirm the observation", "Dark radar features may have other causes; have a qualified reviewer check the image."], ["Do not infer severity", "No area, oil volume, product type, or environmental context is available for this candidate."]];
-    } else if (!environmentData) {
-      $("engine-risk").textContent = "Environmental check needed";
-      $("engine-risk-reason").textContent = "The candidate location is mapped. Read current marine conditions and nearby coastline/sensitive-place records to inform the review.";
-      $("engine-severity").textContent = `Feature area ${prettyArea(regionAreaKm2)} · not oil volume`;
-      $("engine-severity-reason").textContent = "The radar footprint gives the size of a possible dark feature. It cannot establish the amount, type, or seriousness of oil.";
-      actions = [["Read conditions at this location", "Fetch modeled waves, current, wind, nearest mapped coast, and nearby OpenStreetMap sensitivity records."], ["Confirm possible oil and extent", "Review the satellite image and obtain field or authority confirmation; do not treat the radar screen as a spill measurement."], ["Prepare a cautious mechanical response", "Keep containment and surface recovery options ready for expert review; check equipment operating limits and crew safety on scene."]];
-    } else {
-      const coastal = environmentData.coastal_context || {};
-      const coastKm = coastal.nearest_coast_km;
-      const sensitiveSites = coastal.mapped_sensitive_sites || [];
-      const closeSites = sensitiveSites.filter((site) => Number(site.distance_km) <= 50);
-      const coastNear = coastKm != null && coastKm <= 25;
-      const coastDataMissing = coastal.openstreetmap_status !== "available" || coastKm == null;
-      if (coastNear || closeSites.length || state.sensitive) {
-        $("engine-risk").textContent = "Elevated environmental review priority";
-        $("engine-risk-reason").textContent = [
-          coastNear ? `nearest mapped coast ${coastKm} km` : null,
-          closeSites.length ? `${closeSites.length} mapped sensitive place(s) within 50 km` : null,
-          state.sensitive ? "analyst marked shoreline sensitivity for review" : null,
-        ].filter(Boolean).join(" · ") + ". This is a screening trigger, not a probability or validated risk score.";
-      } else if (coastDataMissing) {
-        $("engine-risk").textContent = "Incomplete · local habitat check needed";
-        $("engine-risk-reason").textContent = "Coastline or protected-place context is missing. No mapped result must not be treated as proof that sensitive areas are absent.";
-      } else {
-        $("engine-risk").textContent = "No nearby mapped trigger · continue monitoring";
-        $("engine-risk-reason").textContent = `No OSM coastline within 25 km (${coastKm} km to nearest mapped coast) and no sensitive place was returned within 50 km. Local data may be incomplete.`;
-      }
-      $("engine-severity").textContent = `Oil severity unconfirmed · feature ${prettyArea(regionAreaKm2)}`;
-      $("engine-severity-reason").textContent = "This is the mapped radar-feature footprint only. Oil presence, recoverable volume, product type, toxicity, and actual harm are not measured by this workflow.";
-      actions = [];
-      if (coastNear || closeSites.length || state.sensitive) actions.push(["Prioritize local shoreline and habitat review", "The mapped proximity/sensitivity trigger warrants a check with local environmental specialists and the competent incident authority." ]);
-      if (coastDataMissing) actions.push(["Confirm coastline and sensitive habitats", "Use verified local habitat/coastline information; volunteered map coverage is incomplete and can miss protected places." ]);
-      actions.push(["Stage mechanical containment and recovery for expert review", "Indian Coast Guard guidance prefers mechanical recovery in Indian waters. For this scenario, local authorities must choose equipment and deployment based on oil type, sea state, access, and equipment limits." ]);
-      actions.push(["Use chemicals only after formal review", "Dispersants are not an automatic cleanup action. Their use requires competent authority approval and a case-specific environmental benefit assessment." ]);
-    }
-    $("engine-confidence").textContent = environmentData ? "Low · model and map clues" : "Low · screening only";
-    $("engine-confidence-reason").textContent = environmentData
-      ? "Conditions are model-based and mapped habitat coverage may be incomplete. Oil presence and actual ecological impact still need confirmation."
-      : "No environmental conditions are loaded yet. The radar candidate alone cannot confirm oil or local impacts.";
-    actions.forEach(([title, detail]) => {
-      const item = document.createElement("li");
-      const heading = document.createElement("b"); heading.textContent = title;
-      const copy = document.createElement("span"); copy.textContent = detail;
-      item.append(heading, copy); list.append(item);
-    });
-  }
-  function marker(latlng, className, label, popup) {
-    return L.marker(latlng, { icon: L.divIcon({ className: "", html: `<span class="cleanup-marker ${className}">${label}</span>`, iconSize: [27, 27], iconAnchor: [13, 13] }) }).bindPopup(popup);
-  }
-  function renderMap() {
-    planLayer.clearLayers();
-    if (!selectedRegion?.geometry || !regionCenter) {
-      $("map-clock").textContent = "WAITING FOR DETECTED REGION";
-      $("map-caption").textContent = "Complete Step 9 or load a reviewed case. The response map will center on the selected detection geometry.";
-      return;
-    }
-    const feature = L.geoJSON(selectedRegion.geometry, { style: { color: "#b7d8ce", weight: 2, dashArray: "5 4", fillColor: "#162b2d", fillOpacity: .78 } })
-      .bindPopup("Selected possible radar feature · not confirmed oil").addTo(planLayer);
-    const bounds = feature.getBounds();
-    const south = bounds.getSouth(), north = bounds.getNorth(), west = bounds.getWest(), east = bounds.getEast();
-    const latSpan = Math.max(north - south, .005), lonSpan = Math.max(east - west, .005);
-    const boomWeight = state.tactic === "protect" ? 1 : state.tactic === "balanced" ? .58 : .22;
-    if (state.resources.booms > 0 && boomWeight > .25) {
-      const b = [[regionCenter[0] + latSpan * .9, regionCenter[1] - lonSpan * .7], [regionCenter[0] + latSpan * .7, regionCenter[1]], [regionCenter[0] + latSpan * .9, regionCenter[1] + lonSpan * .7]];
-      L.polyline(b, { color: "#33dbc7", weight: 4 + Math.min(state.resources.booms, 6), opacity: .96, dashArray: "8 5", lineCap: "round" }).bindPopup(`${state.resources.booms} boom teams · illustrative placement only`).addTo(planLayer);
-    }
-    const count = Math.min(state.resources.skimmers, 4);
-    for (let i = 0; i < count; i++) {
-      const pos = [regionCenter[0] - latSpan * (.45 + .12 * (i % 3)), regionCenter[1] + lonSpan * (.5 + .14 * Math.floor(i / 3))];
-      marker(pos, "", "S", `Skimmer unit ${i + 1} · illustrative surface recovery point`).addTo(planLayer);
-    }
-    const absorb = Math.min(state.resources.sorbents, 4);
-    for (let i = 0; i < absorb; i++) {
-      const pos = [regionCenter[0] + latSpan * (.45 + .12 * (i % 2)), regionCenter[1] - lonSpan * (.5 + .14 * Math.floor(i / 2))];
-      marker(pos, "sorbent", "A", `Sorbent kit ${i + 1} · illustrative absorbent point`).addTo(planLayer);
-    }
-    for (const site of (environmentData?.coastal_context?.mapped_sensitive_sites || [])) {
-      marker([site.latitude, site.longitude], "shore", "!", `${site.name} · mapped OSM clue · verify with authoritative local data`).addTo(planLayer);
-    }
-    $("map-clock").textContent = analysisContext?.synthetic === false ? "SAVED CASE · REVIEW PLAN" : "DETECTED FEATURE · DEMO PLAN";
-    $("map-caption").textContent = `The outlined polygon is the selected detection geometry (${prettyArea(regionAreaKm2)}). Equipment symbols show editable planning examples only; they do not indicate a forecast, confirmed coastline impact, real inventory, or deployment order.${environmentData ? " Mapped habitat clues are shown where returned." : " Read environmental conditions to add mapped context."}`;
-    if (environmentData && map.getZoom() < 5) map.fitBounds(feature.getBounds(), { padding: [45, 45], maxZoom: 10 });
-  }
-  function updateDashboard() {
-    const total = Object.values(state.resources).reduce((a, b) => a + b, 0);
-    $("resource-total").textContent = `${total} demo units`;
-    for (const k of Object.keys(state.resources)) $(`${k}-qty`).textContent = state.resources[k];
-    $("sensitive-area").checked = state.sensitive;
-    $("dispersant").checked = state.dispersant;
-    document.querySelectorAll(".tactic-option").forEach((button) => {
-      const selected = button.dataset.tactic === state.tactic;
-      button.classList.toggle("is-selected", selected);
-      button.setAttribute("aria-pressed", String(selected));
-    });
-    $("tactic-learning").replaceChildren();
-    const learnTitle = document.createElement("b"); learnTitle.textContent = tacticExplanations[state.tactic][0];
-    const learnText = document.createElement("span"); learnText.textContent = tacticExplanations[state.tactic][1];
-    $("tactic-learning").append(learnTitle, learnText);
-    const protect = state.tactic !== "recover" && state.resources.booms > 0;
-    $("containment-status").textContent = protect ? (state.tactic === "balanced" ? "Split containment and recovery" : "Shoreline boom line active") : "No boom deployment assigned";
-    $("containment-detail").textContent = `${state.resources.booms} boom teams · ${protect ? "priority coast coverage" : "available for reassignment"}`;
-    $("recovery-status").textContent = state.resources.skimmers + state.resources.sorbents ? "Surface recovery staged" : "No recovery units assigned";
-    $("recovery-detail").textContent = `${state.resources.skimmers} skimmers · ${state.resources.sorbents} sorbent kits assigned`;
-    $("shoreline-status").textContent = state.sensitive ? "Habitat review flagged" : "Local habitat review";
-    $("shoreline-detail").textContent = state.sensitive ? "Planning assumption · verify against authoritative local data" : "No analyst flag · local review still required";
-    $("tactic-feedback").textContent = state.dispersant
-      ? `${tacticMessages[state.tactic]} Dispersant consideration flagged: hold for competent authority approval and case-specific NEBA; it transfers oil into droplets in the water column.`
-      : tacticMessages[state.tactic] + " No dispersant action is selected.";
-    updateEngine();
-    renderMap();
-    persist();
-  }
-  document.querySelectorAll(".tactic-option").forEach((button) => button.addEventListener("click", () => { state.tactic = button.dataset.tactic; updateDashboard(); }));
-  $("apply-suggested-plan").addEventListener("click", () => {
-    state.tactic = "balanced";
-    state.sensitive = false;
-    state.dispersant = false;
-    updateDashboard();
-    $("tactic-feedback").scrollIntoView({ behavior: "smooth", block: "nearest" });
-  });
-  document.querySelectorAll(".qty-button").forEach((button) => button.addEventListener("click", () => {
-    const key = button.dataset.resource;
-    state.resources[key] = Math.max(0, Math.min(12, state.resources[key] + Number(button.dataset.change)));
-    updateDashboard();
-  }));
-  $("sensitive-area").addEventListener("change", (e) => { state.sensitive = e.target.checked; updateDashboard(); });
-  $("dispersant").addEventListener("change", (e) => { state.dispersant = e.target.checked; updateDashboard(); });
-  $("assess-environment").addEventListener("click", assessSelectedEnvironment);
-  $("advance-hour").addEventListener("click", assessSelectedEnvironment);
-  renderAnalysisSummary();
-  renderEnvironment();
-  initializeRegions();
-  updateDashboard();
-  setTimeout(() => map.invalidateSize(), 120);
+/* ---------- Step 0 (hidden): turn the photo into a map-style render ---------- */
+const photo = $('#photo'), canvas = $('#map-canvas');
+function buildMap() {
+  const cw = 309, ch = 303, c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(photo, 0, 0, cw, ch);
+  let d; try { d = g.getImageData(0, 0, cw, ch); } catch (e) { return fail(); }
+  const p = d.data, n = cw * ch, lum = new Float32Array(n), cls = new Int8Array(n);
+  for (let i = 0; i < n; i++) { lum[i] = .3*p[i*4] + .59*p[i*4+1] + .11*p[i*4+2]; cls[i] = Math.min(p[i*4], p[i*4+1], p[i*4+2]) > 185 ? -1 : 9; } // -1 cloud, 9 undecided
+  const flood = (sx, sy, th) => { const st = [Math.floor(sy*ch)*cw + Math.floor(sx*cw)];
+    while (st.length) { const i = st.pop(); if (i < 0 || i >= n || cls[i] !== 9 || lum[i] >= th) continue; cls[i] = 0; const x = i % cw; if (x > 0) st.push(i-1); if (x < cw-1) st.push(i+1); st.push(i-cw, i+cw); } };
+  [[.92,.12],[.85,.85],[.62,.5],[.8,.4]].forEach(s => flood(s[0], s[1], 105)); flood(.41, .35, 135);
+  for (let i = 0; i < n; i++) if (cls[i] === 9) { const r = p[i*4], gg = p[i*4+1], b = p[i*4+2]; cls[i] = (r - b > 38 && lum[i] > 130) ? 1 : (gg > r + 6 && gg > b + 6) ? 2 : 3; }
+  // cloud-covered pixels are filled in from their neighbours (no data under cloud)
+  for (let pass = 0, left = 1; pass < 80 && left; pass++) { left = 0; const c2 = cls.slice(), l2 = lum.slice();
+    for (let i = 0; i < n; i++) if (cls[i] < 0) { const x = i % cw, nb = [x > 0 ? i-1 : -1, x < cw-1 ? i+1 : -1, i-cw, i+cw]; let ok = false;
+      for (const j of nb) if (j >= 0 && j < n && cls[j] >= 0) { c2[i] = cls[j]; l2[i] = lum[j]; ok = true; break; } if (!ok) left++; }
+    cls.set(c2); lum.set(l2); }
+  const o = g.createImageData(cw, ch), q = o.data, water = new Uint8Array(n);
+  for (let i = 0; i < n; i++) { const k = cls[i], l = lum[i], x = i % cw; let R, Gc, B;
+    if (k === 0) { water[i] = 1; const coast = (x > 0 && cls[i-1] > 0) || (x < cw-1 && cls[i+1] > 0) || (i >= cw && cls[i-cw] > 0) || (i < n-cw && cls[i+cw] > 0);
+      if (coast) { R = 96; Gc = 121; B = 135; } else { R = 118 + l*.12; Gc = 142 + l*.12; B = 154 + l*.1; } }
+    else if (k === 1) { R = 198; Gc = 186; B = 148; }
+    else if (k === 2) { R = 128; Gc = 151; B = 134; }
+    else { const v = .9 + .28 * clamp(l/255, 0, 1); R = 168*v; Gc = 162*v; B = 148*v; }
+    q[i*4] = R; q[i*4+1] = Gc; q[i*4+2] = B; q[i*4+3] = 255; }
+  g.putImageData(o, 0, 0);
+  const x = canvas.getContext('2d'); x.imageSmoothingQuality = 'high'; x.filter = 'blur(.6px)'; x.drawImage(c, 0, 0, W, H); x.filter = 'none';
+  x.font = 'italic 15px "Segoe UI",sans-serif'; x.fillStyle = 'rgba(40,62,78,.95)'; x.fillText('Bay of Bengal', 470, 120);
+  x.font = '12px "Segoe UI",sans-serif'; x.fillStyle = 'rgba(38,38,38,.9)'; x.fillText('Ennore', 232, 372);
+  const sw = photo.naturalWidth, sh = photo.naturalHeight; // keep the photo's own source marks
+  [[.64,0,.36,.105],[.64,.92,.28,.08]].forEach(r => x.drawImage(photo, r[0]*sw, r[1]*sh, r[2]*sw, r[3]*sh, r[0]*W, r[1]*H, r[2]*W, r[3]*H));
+  mask = { w: cw, h: ch, d: water };
+  $('#map-note').textContent = 'Map-style render is generated in your browser from the photo’s colours. Cloud-covered areas are filled in from neighbouring pixels. It is a visual aid, not survey data.';
+}
+function fail() { setBase('photo'); $('[data-base="map"]').disabled = true; $('#map-note').textContent = 'Map-style render needs the page served over http(s). Showing the source photo instead.'; }
+const isWater = (x, y) => mask ? !!mask.d[clamp(Math.floor(y/H*mask.h),0,mask.h-1)*mask.w + clamp(Math.floor(x/W*mask.w),0,mask.w-1)] : x > 335;
+function setBase(b) { scene.dataset.base = b; document.querySelectorAll('.seg-btn').forEach(x => { const on = x.dataset.base === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); }
+if (photo.complete && photo.naturalWidth) buildMap(); else { photo.addEventListener('load', buildMap); photo.addEventListener('error', () => { $('#map-note').textContent = 'Could not load ennore-2023-scene.png.'; }); }
 
-  const taskSelects = [...document.querySelectorAll(".task-row select")];
-  taskSelects.forEach((select) => {
-    const row = select.closest(".task-row");
-    select.value = state.tasks[row.dataset.task];
-    row.dataset.state = select.value;
-    select.addEventListener("change", () => { state.tasks[row.dataset.task] = select.value; row.dataset.state = select.value; updateTasks(); persist(); });
-  });
-  function updateTasks() {
-    const done = Object.values(state.tasks).filter((v) => v === "done").length;
-    $("task-progress-label").textContent = `${done} of ${taskSelects.length} complete`;
-    $("task-progress-bar").style.width = `${done / taskSelects.length * 100}%`;
-  }
-  updateTasks();
+/* ---------- geometry ---------- */
+function smooth(P) { const n = P.length; let d = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) { const a = P[(i-1+n)%n], b = P[i], c = P[(i+1)%n], e = P[(i+2)%n];
+    d += `C${(b[0]+(c[0]-a[0])/6).toFixed(1)},${(b[1]+(c[1]-a[1])/6).toFixed(1)} ${(c[0]-(e[0]-b[0])/6).toFixed(1)},${(c[1]-(e[1]-b[1])/6).toFixed(1)} ${c[0].toFixed(1)},${c[1].toFixed(1)}`; } return d + 'Z'; }
+function dense(P) { const n = P.length, out = [];
+  for (let i = 0; i < n; i++) { const a = P[(i-1+n)%n], b = P[i], c = P[(i+1)%n], e = P[(i+2)%n];
+    const c1 = [b[0]+(c[0]-a[0])/6, b[1]+(c[1]-a[1])/6], c2 = [c[0]-(e[0]-b[0])/6, c[1]-(e[1]-b[1])/6];
+    for (let t = 0; t < 1; t += .125) { const u = 1-t; out.push([u*u*u*b[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*c[0], u*u*u*b[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*c[1]]); } } return out; }
+const inPoly = (x, y, P) => { let r = false; for (let i = 0, j = P.length-1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0]-P[i][0])*(y-P[i][1])/(P[j][1]-P[i][1])+P[i][0]) r = !r; return r; };
+const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const vec = b => [Math.sin(rad(b)), -Math.cos(rad(b))];
+const COMP = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'], card = b => COMP[Math.round(b/22.5) % 16];
+function geo() { // leading edge, boom ring, all derived from outline + drift direction
+  const key = JSON.stringify([S.out, S.dir]); if (geoC && geoC.key === key) return geoC;
+  const poly = dense(S.out), n = poly.length, d = vec(S.dir); let F = poly[0], best = -1e9;
+  poly.forEach(q => { const s = q[0]*d[0] + q[1]*d[1]; if (s > best) { best = s; F = q; } });
+  let area = 0; for (let i = 0; i < n; i++) { const j = (i+1) % n; area += poly[i][0]*poly[j][1] - poly[j][0]*poly[i][1]; } const sg = area > 0 ? 1 : -1;
+  let ring = poly.map((q, i) => { const a = poly[(i-1+n)%n], b = poly[(i+1)%n]; let tx = b[0]-a[0], ty = b[1]-a[1]; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l; return [q[0] + sg*ty*13, q[1] - sg*tx*13]; });
+  for (let pass = 0; pass < 3; pass++) ring = ring.map((q, i) => { let x = 0, y = 0; for (let k = -2; k <= 2; k++) { const r = ring[(i+k+n)%n]; x += r[0]; y += r[1]; } return [x/5, y/5]; });
+  return geoC = { key, poly, F, d, p: [-d[1], d[0]], ring };
+}
+function resample(P, sp) { const n = P.length, cum = [0]; for (let i = 0; i < n; i++) { const b = P[(i+1)%n]; cum.push(cum[i] + Math.hypot(b[0]-P[i][0], b[1]-P[i][1])); }
+  const L = cum[n], N = Math.max(8, Math.round(L / sp)), out = []; let k = 0;
+  for (let i = 0; i < N; i++) { const s = L * i / N; while (cum[k+1] < s) k++; const a = P[k], b = P[(k+1)%n], t = (s - cum[k]) / ((cum[k+1] - cum[k]) || 1); out.push([a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t]); } return out; }
+function defaultEq() { const g = geo();
+  return [['skimmer',24,0],['sorbent',52,-22],['sorbent',52,22],['skimmer',82,0],['sorbent',110,0]].map(([t, a, l]) => { let x, y;
+    for (let k = 0; k < 5; k++) { x = g.F[0] - g.d[0]*a + g.p[0]*l; y = g.F[1] - g.d[1]*a + g.p[1]*l; if (inPoly(x, y, g.poly)) break; l *= .6; }
+    return { t, x: clamp(x, 10, W-10), y: clamp(y, 10, H-10) }; }); }
+function ensureEq() { const key = JSON.stringify([S.out, S.dir]); if (!S.eq || (!S.eqCustom && S.eqKey !== key)) { S.eq = defaultEq(); S.eqKey = key; } }
 
-  function buildReportObject() {
-    const tasks = [...document.querySelectorAll(".task-row")].map((row) => ({
-      title: row.querySelector("b").textContent,
-      status: row.querySelector("select").selectedOptions[0].textContent,
-    }));
-    const actions = [...document.querySelectorAll("#engine-actions li")].map((item) => ({
-      title: item.querySelector("b")?.textContent || "Recommended action",
-      detail: item.querySelector("span")?.textContent || "",
-    }));
-    const agencies = [...document.querySelectorAll(".agency-row")].filter((row) => row.querySelector("input").checked).map((row) => ({
-      name: row.querySelector("b").textContent,
-      role: row.querySelector("small").textContent,
-    }));
-    return {
-      generated_at: new Date().toISOString(),
-      case_id: analysisContext?.caseId || analysisContext?.caseLabel || "Practice case",
-      data_status: analysisContext?.synthetic === false ? "Saved real-data review · not confirmation of oil" : "Synthetic practice scenario · not a real incident",
-      location: analysisContext?.synthetic === false ? ($("live-jurisdiction").value.trim() || "Jurisdiction not verified") : (analysisContext?.location || "Practice-scene coordinates shown below; demo geography only"),
-      jurisdiction: analysisContext?.synthetic === false ? ($("live-jurisdiction").value.trim() || "Not verified") : "Illustrative exercise; competent local jurisdiction not applicable",
-      analysis: { candidate_count: analysisContext?.candidateCount ?? "Not available", origin_estimate: analysisContext?.originEstimate == null ? "Not available" : analysisContext.originEstimate ? "Estimated · uncertain" : "Not returned", vessel_leads: analysisContext?.vesselLeadCount ?? "Not available" },
-      region: { latitude: regionCenter?.[0]?.toFixed(5) ?? "—", longitude: regionCenter?.[1]?.toFixed(5) ?? "—", area_km2: regionAreaKm2 == null ? "—" : regionAreaKm2.toFixed(5), screening_score: selectedRegion?.screeningScore ?? "Not recorded" },
-      environment: environmentData || {},
-      risk: { priority: $("engine-risk").textContent, severity: $("engine-severity").textContent, reason: `${$("engine-risk-reason").textContent} ${$("engine-severity-reason").textContent}` },
-      recommendations: actions,
-      response_plan: { tactic: state.tactic, booms: `${state.resources.booms} demo teams`, skimmers: `${state.resources.skimmers} demo units`, sorbents: `${state.resources.sorbents} demo kits`, tasks },
-      agencies,
-      limitations: `This is a decision-support summary, not incident confirmation, a validated severity score, a forecast, or deployment order. Radar-feature area is not oil volume. Conditions are model-based; mapped habitat records may be incomplete. Verify with the competent authority, local observations, oil properties, safety and equipment limits. Indian agencies are representative names for the India-focused demo and are not responsible for incidents outside their jurisdiction. Demo notification previews are not sent. Sources: Indian Coast Guard marine environment guidance https://indiancoastguard.gov.in/marine-environment ; Indian Coast Guard 2025 dispersant guidance https://indiancoastguard.gov.in/sites/default/files/202408011002435750687OSDGuidelines2025.pdf ; INCOIS OOSA https://oosa.incois.gov.in/ ; Open-Meteo https://open-meteo.com/en/docs/marine-weather-api ; OpenStreetMap https://www.openstreetmap.org/copyright .`,
-      sources: [...(environmentData?.sources || []),
-        { name: "Indian Coast Guard · Marine Environment", url: "https://indiancoastguard.gov.in/marine-environment" },
-        { name: "Indian Coast Guard · Oil Spill Dispersant Guidelines 2025", url: "https://indiancoastguard.gov.in/sites/default/files/202408011002435750687OSDGuidelines2025.pdf" },
-        { name: "ESSO-INCOIS OOSA", url: "https://oosa.incois.gov.in/" },
-      ],
-    };
-  }
-  async function downloadResponsePdf(report) {
-    const response = await fetch("http://127.0.0.1:8002/api/reports/response.pdf", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ report }),
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.detail || `PDF service returned ${response.status}.`);
-    }
-    const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a"); link.href = url;
-    link.download = `waketrace-response-report-${new Date().toISOString().slice(0, 10)}.pdf`;
-    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  $("generate-report").addEventListener("click", async () => {
-    const button = $("generate-report"); button.disabled = true; button.textContent = "Preparing PDF…";
-    const report = buildReportObject();
-    $("report-content").textContent = JSON.stringify(report, null, 2);
-    $("incident-report-preview").open = true;
-    if (window.location.protocol === "file:") {
-      $("environment-status").textContent = "Start WakeTrace.bat and open this page through http://localhost:8080 to create the PDF.";
-      button.disabled = false; button.textContent = "Generate incident report PDF";
-      return;
-    }
-    try {
-      await downloadResponsePdf(report);
-      $("environment-status").textContent = "Response assessment PDF downloaded. It includes the selected region, environmental check, recommended actions, agency roles, and limitations.";
-    } catch (error) {
-      $("environment-status").textContent = `PDF could not be generated: ${error.message || "start the WakeTrace service and try again."}`;
-    } finally { button.disabled = false; button.textContent = "Generate incident report PDF"; }
-  });
+/* ---------- dragging (outline handles, equipment markers) ---------- */
+const getPos = (k, i) => k === 'o' ? S.out[i] : [S.eq[i].x, S.eq[i].y];
+function setPos(k, i, x, y) { x = clamp(x, 8, W-8); y = clamp(y, 8, H-8);
+  if (k === 'o') { S.out[i] = [x, y]; S.dirty = true; rOut(); } else { S.eq[i].x = x; S.eq[i].y = y; S.eqCustom = true; S.dirty = true; rEq(); } }
+const toView = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left)/r.width*W, (e.clientY - r.top)/r.height*H]; };
+function makeDraggable(node, k, i) {
+  node.dataset.key = k + i;
+  node.addEventListener('pointerdown', e => { e.preventDefault(); drag = { k, i }; focusKey = k + i; svg.setPointerCapture(e.pointerId); });
+  node.addEventListener('keydown', e => { const st = e.shiftKey ? 12 : 4, m = { ArrowLeft:[-st,0], ArrowRight:[st,0], ArrowUp:[0,-st], ArrowDown:[0,st] }[e.key];
+    if (m) { e.preventDefault(); const p = getPos(k, i); focusKey = k + i; setPos(k, i, p[0]+m[0], p[1]+m[1]); } });
+}
+svg.addEventListener('pointermove', e => { if (!drag) return; const p = toView(e); setPos(drag.k, drag.i, p[0], p[1]); });
+['pointerup','pointercancel'].forEach(t => svg.addEventListener(t, () => { drag = null; }));
+const restoreFocus = g => { if (focusKey && !drag) { const n = g.querySelector(`[data-key="${focusKey}"]`); if (n && document.activeElement !== n) n.focus({ preventScroll: true }); } };
 
-  $("prepare-notice").addEventListener("click", () => {
-    const names = [...document.querySelectorAll(".agency-row input:checked")].map((box) => box.closest(".agency-row").querySelector("b").textContent);
-    const box = $("notification-preview");
-    box.innerHTML = "";
-    const dot = document.createElement("span"); dot.className = "preview-dot";
-    const content = document.createElement("div");
-    const title = document.createElement("b"); title.textContent = names.length ? `Draft exercise notice · ${names.length} selected organization${names.length === 1 ? "" : "s"}` : "No organizations selected";
-    const desc = document.createElement("small");
-    desc.textContent = names.length ? `To: ${names.join(" · ")}. Subject: Illustrative oil-spill response coordination exercise. This preview is local only; no notification was sent.` : "Select one or more organizations before preparing this preview.";
-    content.append(title, desc); box.append(dot, content);
-  });
+/* ---------- renderers ---------- */
+function rOut() {
+  const g = G.out; g.replaceChildren(); const d = smooth(S.out);
+  el('path', { d, class: 'out-fill' }, g); el('path', { d, class: 'out-halo' }, g); el('path', { d, class: 'out-line' }, g);
+  if (S.step === 0) S.out.forEach((_, i) => { const [x, y] = S.out[i], n = el('g', { transform: `translate(${x} ${y})`, class: 'hnd', tabindex: 0, role: 'button', 'aria-label': `Boundary handle ${i+1} of ${S.out.length}. Arrow keys move it.` }, g);
+    el('circle', { r: 20*K, fill: 'transparent' }, n); el('circle', { r: 6.5*K, class: 'hv' }, n); makeDraggable(n, 'o', i); });
+  restoreFocus(g);
+}
+function rFlow() { // two or three arrows at the leading edge only
+  const g = G.flow; g.replaceChildren(); if (S.step < 1 || S.step > 3) return; g.setAttribute('opacity', S.step === 1 ? 1 : .6);
+  const f = geo(), ang = Math.atan2(f.d[1], f.d[0]) * 180 / Math.PI, dur = (1.8 / (.25 + SPD)).toFixed(2) + 's';
+  [[-36,100,22,7],[0,128,40,-3],[36,90,14,10]].forEach(([lat, L, ahead, jit]) => {
+    const x = f.F[0] + f.d[0]*ahead + f.p[0]*lat, y = f.F[1] + f.d[1]*ahead + f.p[1]*lat, hl = 16*K, p = `M${-L},0 L${-hl},0`;
+    const n = el('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(ang + jit).toFixed(1)})`, style: `--dur:${dur}` }, g);
+    el('path', { d: p, class: 'flow-halo' }, n); el('path', { d: p, class: 'flow-dash' }, n); el('path', { d: `M0,0 L${-hl},${-9*K} L${-hl},${9*K}Z`, class: 'flow-head' }, n); });
+}
+function rBoom() { // closed ring of linked boom sections around the whole patch
+  const g = G.boom; g.replaceChildren(); if (S.step < 2 || (S.step === 4 && !S.use.boom)) return;
+  const f = geo(), pts = resample(f.ring, 19 * Math.max(1, K * .9)), n = pts.length;
+  el('path', { d: 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L') + 'Z', class: 'boom-shadow' }, g);
+  pts.forEach((a, i) => { const b = pts[(i+1)%n], dx = b[0]-a[0], dy = b[1]-a[1], len = Math.hypot(dx, dy);
+    el('rect', { x: -len*.46, y: -4*K, width: len*.92, height: 8*K, rx: 4*K, class: 'boom-seg', transform: `translate(${((a[0]+b[0])/2).toFixed(1)} ${((a[1]+b[1])/2).toFixed(1)}) rotate(${(Math.atan2(dy, dx)*180/Math.PI).toFixed(1)})` }, g); });
+  pts.forEach(a => el('circle', { cx: a[0].toFixed(1), cy: a[1].toFixed(1), r: 2.4*K, class: 'boom-conn' }, g));
+}
+function rEq() {
+  const g = G.eq; g.replaceChildren(); if (S.step < 3) return; ensureEq();
+  const cnt = { skimmer: 0, sorbent: 0 }, interactive = S.step === 3;
+  S.eq.forEach((q, i) => { const sk = q.t === 'skimmer', name = `${sk ? 'Skimmer' : 'Sorbent'} ${++cnt[q.t]}`, off = S.step === 4 && !(sk ? S.use.skim : S.use.sorb);
+    const n = el('g', { transform: `translate(${q.x} ${q.y})`, class: `eq ${sk ? 'skim' : 'sorb'}${off ? ' off' : ''}${interactive ? '' : ' static'}` }, g);
+    if (interactive) { n.setAttribute('tabindex', 0); n.setAttribute('role', 'button'); n.setAttribute('aria-label', `${name} at the front end. Arrow keys move it.`); }
+    const s = el('g', { transform: `scale(${K})` }, n); el('circle', { r: 22, fill: 'transparent' }, s); el('circle', { r: 14, class: 'pulse' }, s);
+    if (sk) { el('rect', { x: -13, y: -10, width: 26, height: 20, rx: 5, class: 'sh' }, s); el('path', { d: 'M-13,-4 L-20,0 L-13,4Z', class: 'sh' }, s); }
+    else { el('circle', { r: 12, class: 'sh' }, s); el('circle', { r: 7, fill: 'none', stroke: '#2a0f45', 'stroke-width': 1, 'stroke-dasharray': '2 2' }, s); }
+    el('text', { class: 'ini', y: 5 }, s).textContent = sk ? 'S' : 'A'; el('text', { class: 'lbl', x: 18, y: -12 }, s).textContent = name;
+    if (interactive) makeDraggable(n, 'e', i); });
+  restoreFocus(g);
+}
 
-  $("live-toggle").addEventListener("click", () => {
-    const panel = $("live-panel");
-    panel.hidden = !panel.hidden;
-    $("live-toggle").setAttribute("aria-expanded", String(!panel.hidden));
-    $("live-toggle").lastElementChild.textContent = panel.hidden ? "＋" : "−";
+/* ---------- replay simulation (illustrative, deterministic) ---------- */
+function simulate() {
+  const g = geo(); ensureEq(); const CS = 6, gw = Math.ceil(W/CS), gh = Math.ceil(H/CS), boom = S.use.boom, ok = new Uint8Array(gw*gh);
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { const cx = (x+.5)*CS, cy = (y+.5)*CS; ok[y*gw+x] = boom ? +inPoly(cx, cy, g.ring) : +(isWater(cx, cy) || inPoly(cx, cy, g.poly)); }
+  const act = S.eq.filter(q => q.t === 'skimmer' ? S.use.skim : S.use.sorb), tg = act.length ? act.map(q => [q.x, q.y]) : [[g.F[0]-g.d[0]*8, g.F[1]-g.d[1]*8]];
+  const dist = new Float32Array(gw*gh).fill(1e9), Q = [];
+  tg.forEach(t => { const i = clamp(Math.floor(t[1]/CS), 0, gh-1)*gw + clamp(Math.floor(t[0]/CS), 0, gw-1); ok[i] = 1; dist[i] = 0; Q.push(i); });
+  for (let h = 0; h < Q.length; h++) { const i = Q[h], x = i % gw, y = (i/gw)|0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x+dx, ny = y+dy; if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
+      const j = ny*gw+nx; if (!ok[j]) continue; const nd = dist[i] + (dx && dy ? 1.414 : 1); if (nd < dist[j] - 1e-6) { dist[j] = nd; Q.push(j); } } }
+  const dirAt = (px, py) => { const cx = clamp(Math.floor(px/CS), 0, gw-1), cy = clamp(Math.floor(py/CS), 0, gh-1), d0 = dist[cy*gw+cx]; let vx = 0, vy = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = cx+dx, ny = cy+dy; if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue; const dj = dist[ny*gw+nx]; if (dj < d0) { vx += dx*(d0-dj); vy += dy*(d0-dj); } }
+    const l = Math.hypot(vx, vy); return l ? [vx/l, vy/l] : null; };
+  const r = rng(7), nz = rng(99), P = [], N = 300, xs = g.poly.map(p => p[0]), ys = g.poly.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  for (let k = 0; P.length < N && k < 9000; k++) { const x = x0 + r()*(x1-x0), y = y0 + r()*(y1-y0); if (inPoly(x, y, g.poly)) P.push({ x, y, m: 1, r: 9 + r()*5, v: .8 + r()*.4, leak: !boom && r() < .35 }); }
+  // Give each particle a nearby recovery point while balancing assignments
+  // across all active units. This keeps one marker from acting like a global vacuum.
+  const recoveryLoad = new Array(act.length).fill(0);
+  if (act.length) P.forEach(p => {
+    const order = act.map((q, i) => ({ i, d: Math.hypot(q.x-p.x, q.y-p.y) }))
+      .sort((a, b) => a.d - b.d || recoveryLoad[a.i] - recoveryLoad[b.i]);
+    const minLoad = Math.min(...recoveryLoad);
+    const choice = order.find(c => recoveryLoad[c.i] <= minLoad + 1) || order[0];
+    p.collector = choice.i; recoveryLoad[choice.i] += 1;
   });
-  $("load-live-case").addEventListener("click", async () => {
-    const verify = $("case-verify-status");
-    const caseId = $("live-case").value.trim();
-    if (!caseId) { verify.textContent = "Enter the ID of a saved real-data case first."; return; }
-    const button = $("load-live-case"); button.disabled = true; button.textContent = "Verifying case…";
-    try {
-      const response = await fetch(`http://127.0.0.1:8002/api/cases/${encodeURIComponent(caseId)}`);
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail || `Case service returned ${response.status}.`);
-      if (data.synthetic === true || !data.detection || !data.case_id) throw new Error("This case is synthetic or has no reviewed detection. Live notifications are blocked.");
-      loadedLiveCase = data.case_id;
-      demoMode = false;
-      analysisContext = {
-        synthetic: false,
-        caseId: data.case_id,
-        candidateCount: data.detection?.candidates?.length || 0,
-        originEstimate: Boolean(data.drift?.origin_zone),
-        vesselLeadCount: (data.vessel_candidates || []).length,
-        detectedRegions: (data.detection?.candidates || []).slice(0, 10).filter((candidate) => candidate.geometry).map((candidate, index) => ({
-          label: `Possible feature ${index + 1}`,
-          geometry: candidate.geometry,
-          pixelCount: candidate.pixel_count,
-          screeningScore: candidate.screening_score,
-          contrastDb: candidate.contrast_from_scene_median_db,
-        })),
-      };
-      $("mode-label").textContent = "LIVE CASE · REVIEW REQUIRED";
-      $("case-label").textContent = `${data.case_id} · real-data review loaded`;
-      $("analysis-title").textContent = "Saved real-data review";
-      $("analysis-source-badge").textContent = "REAL REVIEW · NOT CONFIRMED";
-      $("hero-description").textContent = "A saved real-data case is loaded. This page provides planning prompts only; the response engine does not score this live case.";
-      $("jurisdiction-copy").textContent = "Confirm the competent authority and incident area for this case. The Indian organizations listed below are illustrative examples and must not be treated as recipients unless they are the proper verified authority.";
-      renderAnalysisSummary();
-      initializeRegions();
-      updateEngine();
-      $("map-caption").textContent = "A saved real-data case is loaded. Select a detected candidate to view its geometry and assess its environmental context.";
-      $("advance-hour").disabled = !selectedRegion;
-      verify.textContent = `Verified case record ${data.case_id} is loaded. Confirm jurisdiction and recipients before sending.`;
-    } catch (error) {
-      loadedLiveCase = null;
-      verify.textContent = `Live mode not enabled: ${error.message || "case service unavailable"}`;
-    } finally { button.disabled = false; button.textContent = "Verify saved case and switch to live"; }
-  });
-  $("send-live").addEventListener("click", async () => {
-    const status = $("live-status");
-    const recipients = $("live-recipients").value.split(/[;,\n]/).map((v) => v.trim()).filter(Boolean);
-    const caseId = $("live-case").value.trim();
-    const jurisdiction = $("live-jurisdiction").value.trim();
-    const summary = $("live-summary").value.trim();
-    const approver = $("live-approver").value.trim();
-    const approvalToken = $("live-approval-code").value;
-    if (demoMode || !loadedLiveCase || caseId !== loadedLiveCase) { status.textContent = "Blocked: load the saved real case first. Demo scenarios cannot send notifications."; return; }
-    if (!jurisdiction || summary.length < 20 || !approver || !approvalToken || recipients.length === 0 || !$("live-confirm").checked) {
-      status.textContent = "Complete the verified jurisdiction, notice summary, allowlisted recipients, approver, approval code, and send confirmation first."; return;
-    }
-    if (recipients.length > 20) { status.textContent = "Choose no more than 20 approved recipients per notice."; return; }
-    const button = $("send-live"); button.disabled = true; button.textContent = "Checking delivery settings…";
-    status.textContent = "Submitting an approved send request to the local WakeTrace service…";
-    try {
-      const response = await fetch("http://127.0.0.1:8002/api/notifications/send", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          demo_mode: false, case_id: caseId, jurisdiction, summary, recipients,
-          authorized_approver: approver, approval_token: approvalToken, jurisdiction_confirmed: true,
-          confirmation_phrase: "SEND",
-          response_report: buildReportObject(),
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail || `Delivery service returned ${response.status}.`);
-      status.textContent = `Accepted by the configured mail service for ${data.sent_count} approved recipient(s). Reference: ${data.notification_id}.`;
-    } catch (error) {
-      status.textContent = `Not sent: ${error.message || "delivery service unavailable"} No successful delivery is claimed.`;
-    } finally { button.disabled = false; button.textContent = "Send approved notification"; }
-  });
+  const frames = [];
+  for (let f = 0; f < FR; f++) { const fr = new Float32Array(P.length*3);
+    P.forEach((p, i) => { if (p.m > 0) { let mx = 0, my = 0;
+        const target = act.length ? act[p.collector] : null;
+        if (p.leak) { mx = g.d[0]; my = g.d[1]; } else if (target) { const tx=target.x-p.x, ty=target.y-p.y, tl=Math.hypot(tx,ty); if(tl>10){mx=tx/tl;my=ty/tl;} }
+        else { const d = dirAt(p.x, p.y); if (d) { mx = d[0]; my = d[1]; } }
+        const nx = p.x + mx*1.5*p.v + (nz()-.5)*.5, ny = p.y + my*1.5*p.v + (nz()-.5)*.5;
+        if (boom ? inPoly(nx, ny, g.ring) : (isWater(nx, ny) || inPoly(nx, ny, g.poly))) { p.x = clamp(nx, 4, W-4); p.y = clamp(ny, 4, H-4); }
+        if (target) {
+          const distance = Math.hypot(target.x-p.x, target.y-p.y);
+          // Each unit has a local pickup radius and its own gradual uptake.
+          const pickupRadius = target.t === 'skimmer' ? 19 : 14;
+          if (distance < pickupRadius) p.m -= target.t === 'skimmer' ? .018 : .012;
+        }
+        p.m = Math.max(0, p.m); }
+      fr[i*3] = p.x; fr[i*3+1] = p.y; fr[i*3+2] = p.m; });
+    frames.push(fr); }
+  sim = { frames, radii: P.map(p => p.r) }; G.oil.replaceChildren();
+  const gg = el('g', { filter: 'url(#goo)', opacity: .86 }, G.oil); parts = P.map(() => el('circle', { fill: '#000' }, gg)); S.dirty = false;
+}
+function rFrame() {
+  if (!sim) return; const i0 = Math.floor(S.f), i1 = Math.min(i0+1, FR-1), a = S.f - i0, A = sim.frames[i0], B = sim.frames[i1];
+  parts.forEach((c, i) => { const m = A[i*3+2] + (B[i*3+2]-A[i*3+2])*a;
+    c.setAttribute('cx', (A[i*3] + (B[i*3]-A[i*3])*a).toFixed(1)); c.setAttribute('cy', (A[i*3+1] + (B[i*3+1]-A[i*3+1])*a).toFixed(1));
+    c.setAttribute('r', (sim.radii[i]*Math.sqrt(m)*1.15).toFixed(1)); c.setAttribute('opacity', m < .04 ? 0 : 1); });
+  G.eq.querySelectorAll('.eq').forEach(n => n.classList.toggle('work', S.playing && !n.classList.contains('off')));
+  $('#scrub').value = Math.floor(S.f);
+  const u = S.f/(FR-1), bm = S.use.boom, eq = (S.use.skim && S.eq.some(q => q.t === 'skimmer')) || (S.use.sorb && S.eq.some(q => q.t === 'sorbent')); let msg;
+  if (S.f <= 0) msg = 'Ready. The dark patch starts at your estimated outline' + (bm ? ', held inside the boom.' : ', with no boom.');
+  else if (u < .2) msg = 'The patch begins to move ahead toward its leading edge, the direction of the assumed drift.';
+  else if (u < .6) msg = eq ? 'Oil reaches the front end, where skimmers and sorbents recover it first so less is pushed onward.' : 'No recovery equipment enabled: oil bunches up at the leading edge and keeps pressing onward.';
+  else if (u < .97) msg = (bm ? 'The boom keeps the oil together while the ' : 'Without a boom, oil spreads out while the ') + (eq ? 'back of the patch thins out as oil is drawn forward and recovered. Used sorbent must be handled as contaminated waste.' : 'back empties toward the front. Nothing is being removed.');
+  else msg = 'Replay complete. The shrinking is a conceptual metaphor, not a measured or predicted result. Oil may remain, escape or reach shore.';
+  if (msg !== lastStatus) { lastStatus = msg; $('#status').textContent = msg; }
+}
+let last = 0, acc = 0;
+function tick(ts) { if (!S.playing) return; const dt = Math.min(.1, (ts - last)/1000); last = ts;
+  if (RM.matches) { acc += dt; if (acc >= .8) { acc = 0; S.f = Math.min(FR-1, S.f + 40); } } else S.f = Math.min(FR-1, S.f + dt*FPS);
+  rFrame(); if (S.f >= FR-1) setPlaying(false); else requestAnimationFrame(tick); }
+function setPlaying(p) { S.playing = p; $('#play').textContent = p ? 'Pause' : 'Play';
+  if (p) { if (S.f >= FR-1) S.f = 0; if (S.dirty || !sim) simulate(); last = performance.now(); acc = 0; requestAnimationFrame(tick); } else rFrame(); }
+
+/* ---------- steps & wiring ---------- */
+function all() { rOut(); rFlow(); rBoom(); rEq(); }
+function go(n) { n = clamp(n, 0, 4); if (S.playing) setPlaying(false); S.step = n; scene.dataset.step = n; focusKey = null;
+  document.querySelectorAll('.panel').forEach(p => p.hidden = +p.dataset.panel !== n);
+  document.querySelectorAll('#stepper button').forEach((b, i) => { b.removeAttribute('aria-current'); if (i === n) b.setAttribute('aria-current', 'step'); b.classList.toggle('done', i < n); });
+  $('#progress-bar').style.width = (n+1)*20 + '%'; $('#badge').textContent = BADGES[n]; $('#prev').disabled = n === 0; $('#next').disabled = n === 4;
+  $('#live').textContent = `Step ${n+1} of 5: ${TITLES[n]}`; G.oil.style.display = n === 4 ? '' : 'none';
+  if (n === 4) { if (S.dirty || !sim) simulate(); S.f = 0; lastStatus = ''; }
+  all(); if (n === 4) rFrame(); }
+function dirUi() { $('#o-dir').textContent = `${S.dir}° → ${card(S.dir)} (assumed)`; $('#compass-arrow').setAttribute('transform', `rotate(${S.dir})`); }
+function syncInputs() { $('#drift-dir').value = S.dir; ['boom','skim','sorb'].forEach(k => $('#use-' + k).checked = S.use[k]); dirUi(); }
+$('#drift-dir').addEventListener('input', e => { S.dir = +e.target.value; S.dirty = true; dirUi(); rFlow(); });
+document.querySelectorAll('#stepper button').forEach(b => b.addEventListener('click', () => go(+b.dataset.go)));
+$('#prev').addEventListener('click', () => go(S.step - 1)); $('#next').addEventListener('click', () => go(S.step + 1));
+document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => setBase(b.dataset.base)));
+$('#reset-out').addEventListener('click', () => { S.out = copy(DEF_OUT); S.dirty = true; rOut(); });
+$('#reset-eq').addEventListener('click', () => { S.eqCustom = false; S.eq = null; S.dirty = true; rEq(); });
+$('#reset-all').addEventListener('click', () => { S.out = copy(DEF_OUT); S.dir = 285; S.eq = null; S.eqCustom = false; S.use = { boom: true, skim: true, sorb: true }; S.f = 0; S.dirty = true; syncInputs(); go(0); });
+$('#play').addEventListener('click', () => setPlaying(!S.playing));
+$('#replay').addEventListener('click', () => { S.f = 0; lastStatus = ''; if (S.dirty || !sim) simulate(); setPlaying(true); });
+$('#scrub').max = FR - 1;
+$('#scrub').addEventListener('input', e => { if (S.playing) setPlaying(false); if (S.dirty || !sim) simulate(); S.f = +e.target.value; rFrame(); });
+['boom','skim','sorb'].forEach(k => $('#use-' + k).addEventListener('change', e => { S.use[k] = e.target.checked; S.dirty = true; const was = S.playing; simulate(); rBoom(); rEq(); rFrame(); if (was) setPlaying(true); }));
+function resize() { const k = clamp(W / (svg.clientWidth || W), .9, 2.2); if (Math.abs(k - K) > .02) { K = k; all(); } }
+new ResizeObserver(resize).observe(svg);
+if (RM.addEventListener) RM.addEventListener('change', () => { if (S.step === 4) rFrame(); });
+K = clamp(W / (svg.clientWidth || W), .9, 2.2); syncInputs(); go(0);
 })();
