@@ -136,6 +136,7 @@ body.guided-mode .map-overlay-chip { border-color: rgb(255 255 255 / 16%); backg
 .warning-row small { color: var(--muted); }
 .warning-row p { margin: 0; color: var(--ink-soft); font-size: 12px; }
 .warning-status { color: #975021 !important; font-weight: 700; }
+.warning-response-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 12px; padding: 10px 16px; text-decoration: none; }
 @media (max-width: 650px) { .warning-row { grid-template-columns: 1fr auto; } .warning-row p { grid-column: 1 / -1; } }
 @media (max-width: 900px) {
   .guided-layout.is-active { grid-template-columns: 1fr; }

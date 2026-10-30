@@ -1,0 +1,1 @@
+"""Response-planning data helpers."""

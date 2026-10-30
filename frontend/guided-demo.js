@@ -1056,6 +1056,26 @@
   }
 
   function stepWarning() {
+    try {
+      sessionStorage.setItem("waketrace-response-context", JSON.stringify({
+        synthetic: true,
+        caseLabel: result.simulation?.label || "Guided practice case",
+        candidateCount: result.detection?.candidates?.length || 0,
+        detectedRegions: (result.detection?.candidates || []).slice(0, 10).map((candidate, index) => ({
+          label: `Possible feature ${index + 1}`,
+          geometry: candidate.geometry,
+          pixelCount: candidate.pixel_count,
+          screeningScore: candidate.screening_score,
+          contrastDb: candidate.contrast_from_scene_median_db,
+        })),
+        observationTime: result.detection?.acquired_at || result.scene?.datetime || null,
+        originEstimate: Boolean(result.drift?.origin_zone),
+        vesselLeadCount: sim.vessels?.length || (result.vessel_candidates || []).length,
+        coastalExposure: true,
+        location: "Coordinates from the selected screened region",
+        generatedAt: new Date().toISOString(),
+      }));
+    } catch { /* the response page can still show its offline preview without session storage */ }
     const audiences = [
       ["Fishing crews", "12 demo contacts", "Avoid the simulated Toamasina coastal impact area · next 48 hours"],
       ["Ferry operators", "2 demo routes", "Review route near the illustrative impact zone"],
@@ -1073,7 +1093,9 @@
     const approve = el("button", "secondary-button", "Preview approval flow");
     approve.type = "button";
     approve.addEventListener("click", () => { status.textContent = "Demo approval recorded · alert remains simulated and was not sent."; approve.disabled = true; approve.textContent = "Demo reviewed"; });
-    panel.append(approve, status, el("p", "guided-disclaimer", "A real alert requires validated forecast inputs, an authorized approver, and verified recipients. This screen never sends messages."));
+    const responseLink = el("a", "primary-button warning-response-link", "Open cleanup response workspace →");
+    responseLink.href = "cleanup-workflow.html?mode=demo";
+    panel.append(approve, status, el("p", "guided-disclaimer", "Demo only · no messages are sent."), responseLink);
     strip.replaceChildren(el("div", "eyebrow", "WARNING WORKFLOW · SIMULATED"), panel);
     chip("", "DRAFT WARNING · NOT SENT");
     msg("Simulated draft advisory for fictional recipients only. No notification was sent.");

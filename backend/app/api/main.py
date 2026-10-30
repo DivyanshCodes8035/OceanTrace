@@ -4,9 +4,15 @@ import json
 import math
 import asyncio
 import csv
+import hmac
 import io
+import os
 import re
+import smtplib
+import ssl
 import tempfile
+import uuid
+from email.message import EmailMessage
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 from typing import Any
@@ -15,6 +21,7 @@ import rasterio
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 
@@ -26,6 +33,8 @@ from app.drift.open_meteo_forcing import fetch_readers
 from app.drift.simulation import DriftInputError, estimate_origin
 from app.vessels.gfw_presence import AISPresenceError, search_gfw_presence
 from app.vessels.matching import VesselMatchingInputError, match_vessel_candidates
+from app.response.environment import assess_environment
+from app.response.report import build_response_report_pdf
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEMO_CASE_PATH = PROJECT_ROOT / "data" / "sample" / "demo_case.json"
@@ -56,9 +65,51 @@ class SaveCaseRequest(BaseModel):
     case_data: dict[str, Any]
 
 
+class NotificationSendRequest(BaseModel):
+    demo_mode: bool
+    case_id: str = Field(min_length=3, max_length=64)
+    jurisdiction: str = Field(min_length=3, max_length=120)
+    summary: str = Field(min_length=20, max_length=1000)
+    recipients: list[str] = Field(min_length=1, max_length=20)
+    authorized_approver: str = Field(min_length=2, max_length=100)
+    approval_token: str = Field(min_length=1, max_length=200)
+    jurisdiction_confirmed: bool
+    confirmation_phrase: str = Field(max_length=12)
+    response_report: dict[str, Any]
+
+
+class EnvironmentAssessmentRequest(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+class ResponseReportRequest(BaseModel):
+    report: dict[str, Any]
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "waketrace-api"}
+
+
+@app.post("/api/environment/assess")
+async def get_environmental_assessment(request: EnvironmentAssessmentRequest) -> dict[str, Any]:
+    """Fetch modeled marine/weather conditions and nearby mapped coast/habitat clues."""
+    try:
+        return await assess_environment(request.latitude, request.longitude)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/reports/response.pdf")
+def download_response_report(request: ResponseReportRequest) -> Response:
+    """Render the reviewed response assessment as a downloadable PDF."""
+    try:
+        pdf_bytes = build_response_report_pdf(request.report)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Could not generate the response PDF.") from exc
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": "attachment; filename=WakeTrace-response-report.pdf"})
 
 
 @app.get("/api/cases/{case_id}")
@@ -96,6 +147,96 @@ def save_case(request: SaveCaseRequest) -> dict[str, str]:
         temporary.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail="Could not save the case to the project data folder.") from exc
     return {"case_id": case_id, "path": "data/cases/" + case_id + ".json"}
+
+
+@app.post("/api/notifications/send")
+def send_incident_notification(request: NotificationSendRequest) -> dict[str, Any]:
+    """Send an approved email only for a saved real-data case and configured allowlist."""
+    if request.demo_mode:
+        raise HTTPException(status_code=403, detail="Demonstration notices cannot be sent.")
+    if request.confirmation_phrase != "SEND" or not request.jurisdiction_confirmed:
+        raise HTTPException(status_code=400, detail="Explicit send approval and jurisdiction confirmation are required.")
+    configured_approval_token = os.getenv("WAKE_TRACE_NOTIFICATION_APPROVAL_TOKEN", "")
+    if not configured_approval_token:
+        raise HTTPException(status_code=503, detail="Authorized notification approval is not configured on this server.")
+    if not hmac.compare_digest(request.approval_token, configured_approval_token):
+        raise HTTPException(status_code=403, detail="The administrator-issued approval code is invalid.")
+    if not re.fullmatch(r"[a-zA-Z0-9_-]{3,64}", request.case_id):
+        raise HTTPException(status_code=422, detail="Choose a valid saved case ID.")
+
+    case_path = SAVED_CASES_DIR / (request.case_id + ".json")
+    if not case_path.is_file():
+        raise HTTPException(status_code=404, detail="Save and verify a real-data case before sending.")
+    try:
+        case = json.loads(case_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="The saved case could not be read.") from exc
+    if case.get("synthetic") is True or not isinstance(case.get("detection"), dict):
+        raise HTTPException(status_code=403, detail="Only a saved real-data review can be used for live notifications.")
+
+    allowed = {
+        addr.strip().lower()
+        for addr in re.split(r"[,;\s]+", os.getenv("WAKE_TRACE_NOTIFICATION_ALLOWLIST", ""))
+        if addr.strip()
+    }
+    recipients = [addr.strip().lower() for addr in request.recipients]
+    email_pattern = re.compile(r"^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$")
+    if not all(email_pattern.fullmatch(addr) for addr in recipients):
+        raise HTTPException(status_code=422, detail="Enter valid recipient email addresses.")
+    if len(set(recipients)) != len(recipients):
+        raise HTTPException(status_code=422, detail="Remove duplicate recipient addresses.")
+    if not allowed or not set(recipients).issubset(allowed):
+        raise HTTPException(status_code=403, detail="Recipients must be configured in the server's verified notification allowlist.")
+
+    host = os.getenv("WAKE_TRACE_SMTP_HOST", "").strip()
+    sender = os.getenv("WAKE_TRACE_SMTP_FROM", "").strip()
+    username = os.getenv("WAKE_TRACE_SMTP_USERNAME", "")
+    password = os.getenv("WAKE_TRACE_SMTP_PASSWORD", "")
+    if not host or not sender or not username or not password:
+        raise HTTPException(status_code=503, detail="Email delivery is not configured on this WakeTrace server.")
+    try:
+        port = int(os.getenv("WAKE_TRACE_SMTP_PORT", "587"))
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="The configured email delivery port is invalid.") from exc
+    if not 1 <= port <= 65535:
+        raise HTTPException(status_code=503, detail="The configured email delivery port is invalid.")
+
+    notification_id = "WT-" + uuid.uuid4().hex[:10].upper()
+    message = EmailMessage()
+    message["Subject"] = f"WakeTrace incident coordination notice · {request.case_id}"
+    message["From"] = sender
+    message["To"] = sender
+    message["Bcc"] = ", ".join(recipients)
+    message.set_content(
+        "WakeTrace incident coordination notice\n\n"
+        f"Case reference: {request.case_id}\n"
+        f"Incident jurisdiction (confirmed by approver): {request.jurisdiction.strip()}\n"
+        f"Authorized approver: {request.authorized_approver.strip()}\n"
+        f"Notification reference: {notification_id}\n\n"
+        "Verified incident summary / requested coordination:\n"
+        f"{request.summary.strip()}\n\n"
+        "This message records a coordination notification for a saved real-data review. "
+        "It does not confirm oil, assign responsibility, or issue an operational deployment order. "
+        "Please use the competent incident authority and approved response procedures.\n"
+    )
+    try:
+        report_bytes = build_response_report_pdf(request.response_report)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="The response PDF could not be prepared, so no notification was sent.") from exc
+    message.add_attachment(report_bytes, maintype="application", subtype="pdf",
+                           filename=f"WakeTrace-response-{request.case_id}.pdf")
+    try:
+        with smtplib.SMTP(host, port, timeout=20) as client:
+            client.ehlo()
+            client.starttls(context=ssl.create_default_context())
+            client.ehlo()
+            client.login(username, password)
+            refused = client.send_message(message, from_addr=sender, to_addrs=recipients)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
+    except (OSError, smtplib.SMTPException) as exc:
+        raise HTTPException(status_code=502, detail="The configured mail service did not confirm delivery. No successful send is claimed.") from exc
+    return {"notification_id": notification_id, "sent_count": len(recipients), "status": "accepted_by_smtp"}
 
 
 class SceneSelection(BaseModel):
