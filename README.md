@@ -14,14 +14,18 @@ The bundled case and guided demonstration are synthetic. Real-data searches and 
 
 ## Quick start on Windows
 
-1. Install Python 3.10 or newer and ensure python is available in PowerShell.
-2. Double-click [Start WakeTrace.bat](Start%20WakeTrace.bat) in this project folder.
-3. Keep both command windows open. The launcher starts the API on port **8002**, serves the website on port **8080**, and opens the Overview page.
-4. Select **Run one-click demo** to open the guided nine-step practice workflow.
+1. Install Python 3.10 or newer.
+2. In PowerShell from the project folder, create the environment and install requirements:
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+   ```
+3. Double-click [Start OceanTrace.bat](Start%20OceanTrace.bat). Keep both command windows open. It starts the API on port **8002**, serves the site on port **8081**, and opens the response exercise.
+4. Use the guided steps on the page to explore the demo.
 
 Check the API at [http://localhost:8002/api/health](http://localhost:8002/api/health). Interactive API documentation is at [http://localhost:8002/docs](http://localhost:8002/docs).
 
-If the browser reports a connection error, confirm that both launcher windows are still running and that ports 8002 and 8080 are available. Opening frontend/index.html directly as a file:// URL does not start the API; use the launcher or the manual steps below. Leaflet and OpenStreetMap map tiles need internet access and may be unavailable if a network or tile service blocks requests.
+If the browser reports a connection error, confirm that both launcher windows are still running and that ports 8002 and 8081 are available. Opening frontend/index.html directly as a file:// URL does not start the API; use the launcher or the manual steps below. Leaflet and OpenStreetMap map tiles need internet access and may be unavailable if a network or tile service blocks requests.
 
 ## Free hosted demo on Render
 
@@ -121,7 +125,7 @@ See [docs/data-contract.md](docs/data-contract.md) for the case schema, result d
     frontend/                 Overview, Map, styles, and guided demo
     data/sample/              Bundled synthetic example
     docs/                     Data contract and AIS CSV template
-    Start WakeTrace.bat       Windows local launcher
+    Start OceanTrace.bat      Windows local launcher
 
 ## API reference
 
