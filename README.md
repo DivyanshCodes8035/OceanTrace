@@ -8,9 +8,12 @@ OceanTrace is a prototype workspace for reviewing possible maritime oil-slick ca
 - **Map** shows the scene and case geometry, supports Copernicus Sentinel-1 search, screens imagery with a dark-feature detector and experimental AI model, runs drift analysis, and reviews vessel data.
 - **Evidence** presents observation time, the configured release search window, sources, model settings, uncertainty, and vessel-screening results.
 - **Guided synthetic demonstration** walks through nine visual steps with a generated radar-style scene, animated current/oil, a possible-origin area, fictional vessel tracks and leads, a forward displacement illustration, a coastal impact zone, and a simulated warning workflow.
+- **Response exercise** presents a five-step illustrative oil-spill cleanup simulation based on a historical Ennore, Chennai before-and-after image, followed by an India coordination overview and a local agency-alert routing exercise.
 - **Backend API** serves the frontend, processes requested real scene imagery, runs both radar screens and the real drift model, and accepts AIS exports supplied by the analyst.
 
 The bundled case and guided demonstration are synthetic. Real-data searches and analyses require internet access, and selected services need credentials.
+
+The Response exercise is a separate educational workflow based on a historical image. It is not a reconstruction of the December 2023 response, an operational plan, a live spill detection, or a live agency notification.
 
 ## Quick start on Windows
 
@@ -63,6 +66,22 @@ Choose **Run one-click demo** on Overview. The demo creates a local radar-style 
 9. **Prepare a warning** — preview draft notices for fictional fishing crews, ferry routes, and vessels. The approval button only changes the demo screen; no message is sent.
 
 The background, slick, source point, current, vessel tracks, forward trajectories, coastal impact segment, scenario count, recipients, and warning messages are generated or fictional. They are not Sentinel-1 imagery, observed wind/current, a forecast, real AIS data, actual shore impact, or evidence about an incident. The wind slider is a simplified browser-side illustration; it does not rerun the backend drift estimate. Use the **Classic view** link in the guided panel to return to the non-guided practice layout.
+
+## Response exercise: Ennore cleanup and agency coordination
+
+Open the **Response** link in the site navigation, or go directly to [frontend/cleanup-workflow.html](frontend/cleanup-workflow.html). This page is a visual teaching exercise based on a historical before-and-after image of the Ennore coast in Chennai. It has a large scene view and a five-step control panel:
+
+1. **Slick** — adjust the dotted outline around the apparent spill area on the image.
+2. **Flow** — set an assumed surface-drift direction. The default bearing is 285° toward WNW; it is an exercise setting, not a measured December 2023 current or wind field.
+3. **Booms** — view an illustrative flexible boom following the outlined area.
+4. **Recovery** — position skimmer and sorbent markers near the assumed leading edge.
+5. **Replay** — play or scrub a visual cleanup sequence. The shrinking dark patch is a conceptual animation; the demo does not calculate recovered volume, equipment effectiveness, or actual spill movement.
+
+Below the map, the **India · Coordination Overview** summarizes possible roles for the Indian Coast Guard, ESSO-INCOIS/OOSA, Tamil Nadu and district authorities, the relevant port or oil-handling facility, local coastal responders, and Navy/Air Force support when requested. It is a plain-language reference, not an incident command chart. The responsible lead depends on the location and applicable contingency plans.
+
+The **Prepare agency alert** workflow demonstrates how a notice can be assembled from the current exercise. The user confirms the Ennore exercise location and chooses which agency groups to include. **Simulate alert routing** creates a local dispatch record, and each group can receive a simulated acknowledgement so the workflow can be demonstrated end to end. All of this stays in the browser: it does not contact agencies or send email, SMS, or operational alerts.
+
+The source image is not georeferenced and provides no GPS coordinates. The editable boundary is a visual estimate, and the drift direction is assumed. Treat the map, equipment placement, agency summary, dispatch record, delivery status, and acknowledgements as illustrative exercise content, not live incident information or response instructions.
 
 The Map also offers **Run simulated case** for an offline practice scene. When a real Sentinel-1 scene has been loaded, the separate practice mode can plant an artificial patch on a temporary copy of that scene. Neither practice mode changes the original image or creates real incident evidence.
 
@@ -119,6 +138,8 @@ See [docs/data-contract.md](docs/data-contract.md) for the case schema, result d
     backend/app/drift/        OpenDrift model and Open-Meteo wind/current retrieval
     backend/app/vessels/      AIS matching and optional Global Fishing Watch presence
     frontend/                 Overview, Map, styles, and guided demo
+    frontend/cleanup-workflow.html  Ennore cleanup and agency coordination exercise
+    frontend/ennore-2023-scene.png Historical image reference used by the Response exercise
     data/sample/              Bundled synthetic example
     docs/                     Data contract and AIS CSV template
     Start WakeTrace.bat       Windows local launcher
