@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WakeTrace · Response exercise · Ennore, Chennai</title>
-<link rel="stylesheet" href="cleanup-workflow.css">
+<link rel="stylesheet" href="cleanup-workflow.css?v=alert-visual-6">
 </head>
 <body>
 <a class="skip" href="#guide">Skip to the guided steps</a>
@@ -176,9 +176,52 @@
     <div class="row resets"><button type="button" class="btn ghost" id="reset-all">Reset entire exercise</button></div>
     <div class="sr" id="live" aria-live="polite"></div>
   </aside>
+  <section class="india-workflow" aria-labelledby="india-workflow-title">
+    <div class="workflow-heading"><div><div class="eyebrow">INDIA · COORDINATION OVERVIEW</div><h2 id="india-workflow-title">Who does what in an Ennore response?</h2></div><span class="workflow-tag">REFERENCE ONLY · NO CONTACTS MADE</span></div>
+    <p class="workflow-intro">For an incident affecting Ennore, Tamil Nadu, the responsible lead depends on whether the spill is offshore, inside port limits, near an oil-handling facility, or on the shoreline. The National Oil Spill Disaster Contingency Plan (NOSDCP) provides the coordination framework.</p>
+    <div class="alert-action-row" id="alert-action-row">
+      <div><b>Need to coordinate a response?</b><span>Prepare a location-based agency notice for review.</span></div>
+      <button type="button" class="btn primary" id="prepare-alert">Prepare agency alert</button>
+    </div>
+    <div class="workflow-table-wrap"><table class="workflow-table"><thead><tr><th scope="col">Agency / organization</th><th scope="col">Role in the response workflow</th></tr></thead><tbody>
+      <tr><th scope="row"><a href="https://indiancoastguard.gov.in/marine-environment" target="_blank" rel="noreferrer">Indian Coast Guard (ICG)</a><small>Central Coordinating Authority under NOSDCP</small></th><td>Coordinates marine oil-spill preparedness and response in India’s maritime zones. Supports pollution response and coordination with state, district, port, and other agencies.</td></tr>
+      <tr><th scope="row"><a href="https://oosa.incois.gov.in/" target="_blank" rel="noreferrer">ESSO-INCOIS · OOSA</a><small>Oil-spill trajectory advisory</small></th><td>Provides oil-spill trajectory and movement advisories to support responders’ planning, including where oil may drift and which areas may need attention.</td></tr>
+      <tr><th scope="row">Tamil Nadu Government, district administration &amp; TNPCB<small>State and local coordination</small></th><td>Coordinates district and local administration, shoreline protection and cleanup when oil threatens or reaches the coast; brings in relevant environmental, emergency, fisheries, and conservation resources.</td></tr>
+      <tr><th scope="row">Relevant port authority &amp; oil-handling facility<small>Jurisdiction-specific response</small></th><td>Leads or carries out pollution response within its applicable port or facility jurisdiction and provides local vessels, equipment, trained personnel, and contingency-plan resources. Confirm the responsible operator for the exact site.</td></tr>
+      <tr><th scope="row">Local bodies, fisheries groups &amp; coastal responders<small>Shoreline support</small></th><td>Support local reporting, access coordination, shoreline observation, community communication, and cleanup under the direction of the competent incident authority.</td></tr>
+      <tr><th scope="row">Indian Navy / Indian Air Force<small>Support when requested</small></th><td>May provide aerial surveillance, logistics, transport, or communications support through the national coordination process when requested.</td></tr>
+    </tbody></table></div>
+    <p class="workflow-caveat">This is a simplified educational summary, not an incident command chart. Specific responsibilities depend on the spill location and applicable contingency plans. <a href="https://indiancoastguard.gov.in/WriteReadData/bookpdf/201512281221565793127NOSDCPCGBR771.pdf" target="_blank" rel="noreferrer">NOSDCP reference ↗</a></p>
+  </section>
+  <section class="alert-preview" id="alert-preview" aria-labelledby="alert-preview-title" hidden>
+    <div class="alert-head"><div><div class="eyebrow">LOCATION-BASED COORDINATION</div><h2 id="alert-preview-title">Agency alert workflow</h2></div><span class="alert-priority">INFORMATION ONLY · HISTORICAL SPILL EXERCISE</span></div>
+    <p class="alert-disclaimer">Exercise only. The supplied image is not georeferenced and has no verified coordinates. Confirm a scenario location below; this workflow simulates routing and acknowledgements locally and never contacts real agencies.</p>
+    <div class="incident-brief" aria-label="Exercise incident summary">
+      <div class="brief-top"><b>EXERCISE NOTICE <span>EX-ENNORE-01</span></b><span class="brief-unverified">HISTORICAL SPILL SCENARIO</span></div>
+      <div class="brief-facts"><div><small>AREA</small><b>Ennore coast · Chennai, Tamil Nadu</b></div><div><small>OBSERVATION SOURCE</small><b>Supplied comparison image · 11 Dec 2023 panel</b></div><div><small>LOCATION PRECISION</small><b>Locality only · no GPS coordinates</b></div><div><small>EXERCISE BASIS</small><b>Historical spill image · simulated response</b></div></div>
+      <p id="brief-tactics">Response scenario details load from the simulator when you prepare the notice.</p>
+    </div>
+    <div class="alert-setup">
+      <fieldset class="alert-location"><legend>1 · Confirm exercise location</legend><label class="check"><input type="checkbox" id="confirm-ennore"> I confirm this exercise represents the Ennore coast, Chennai, Tamil Nadu</label><small>Location comes from the exercise context. The supplied photo is not georeferenced, so it does not provide coordinates.</small></fieldset>
+      <fieldset class="alert-recipients"><legend>2 · Route to relevant groups</legend>
+        <label><input type="checkbox" class="alert-recipient" value="icg" checked><span><b>Indian Coast Guard</b><small>Why: central marine spill coordination · Ask: verify the lead and advise on marine response coordination.</small></span></label>
+        <label><input type="checkbox" class="alert-recipient" value="state" checked><span><b>Tamil Nadu / district authorities</b><small>Why: potential shoreline exposure · Ask: confirm local jurisdiction and shoreline monitoring needs.</small></span></label>
+        <label><input type="checkbox" class="alert-recipient" value="port" checked><span><b>Relevant port / oil-handling facility</b><small>Why: nearby facility or port may be relevant · Ask: verify exact jurisdiction and available response resources.</small></span></label>
+        <label><input type="checkbox" class="alert-recipient" value="incois" checked><span><b>ESSO-INCOIS · OOSA</b><small>Why: trajectory advisory support · Ask: review possible movement when verified location and conditions are available.</small></span></label>
+      </fieldset>
+    </div>
+    <div class="alert-message-wrap"><label>3 · Review the notice collected from this simulation</label>
+      <div class="notice-simulation" id="notice-simulation" aria-live="polite"></div>
+      <textarea id="alert-message" rows="8" readonly hidden aria-hidden="true"></textarea>
+    </div>
+    <button type="button" class="btn primary" id="send-demo-alert" disabled>Simulate alert routing</button>
+    <div class="alert-timeline" id="alert-timeline" aria-label="Alert workflow status"></div>
+    <div id="alert-delivery" class="alert-delivery" aria-live="polite" hidden></div>
+    <p class="alert-live-note"><b>Real incidents:</b> Sending requires verified coordinates, confirmed jurisdiction, official recipient contacts, and authorized approval. This demo does not send email, SMS, or agency notifications.</p>
+  </section>
   </div>
 </main>
 
-<script src="cleanup-workflow.js"></script>
+<script src="cleanup-workflow.js?v=alert-visual-6"></script>
 </body>
 </html>

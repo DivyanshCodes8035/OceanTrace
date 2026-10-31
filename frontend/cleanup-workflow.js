@@ -96,7 +96,8 @@ function ensureEq() { const key = JSON.stringify([S.out, S.dir]); if (!S.eq || (
 /* ---------- dragging (outline handles, equipment markers) ---------- */
 const getPos = (k, i) => k === 'o' ? S.out[i] : [S.eq[i].x, S.eq[i].y];
 function setPos(k, i, x, y) { x = clamp(x, 8, W-8); y = clamp(y, 8, H-8);
-  if (k === 'o') { S.out[i] = [x, y]; S.dirty = true; rOut(); } else { S.eq[i].x = x; S.eq[i].y = y; S.eqCustom = true; S.dirty = true; rEq(); } }
+  if (k === 'o') { S.out[i] = [x, y]; S.dirty = true; rOut(); } else { S.eq[i].x = x; S.eq[i].y = y; S.eqCustom = true; S.dirty = true; rEq(); }
+  if ($('#alert-preview') && !$('#alert-preview').hidden) updateAlertDraft(); }
 const toView = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left)/r.width*W, (e.clientY - r.top)/r.height*H]; };
 function makeDraggable(node, k, i) {
   node.dataset.key = k + i;
@@ -205,8 +206,9 @@ function rFrame() {
   else if (u < .97) msg = (bm ? 'The boom keeps the oil together while the ' : 'Without a boom, oil spreads out while the ') + (eq ? 'back of the patch thins out as oil is drawn forward and recovered. Used sorbent must be handled as contaminated waste.' : 'back empties toward the front. Nothing is being removed.');
   else msg = 'Replay complete. The shrinking is a conceptual metaphor, not a measured or predicted result. Oil may remain, escape or reach shore.';
   if (msg !== lastStatus) { lastStatus = msg; $('#status').textContent = msg; }
+  if (!$('#alert-preview').hidden && Date.now() - lastNoticeFrameAt > 350) { lastNoticeFrameAt = Date.now(); updateAlertDraft(); }
 }
-let last = 0, acc = 0;
+let last = 0, acc = 0, lastNoticeFrameAt = 0;
 function tick(ts) { if (!S.playing) return; const dt = Math.min(.1, (ts - last)/1000); last = ts;
   if (RM.matches) { acc += dt; if (acc >= .8) { acc = 0; S.f = Math.min(FR-1, S.f + 40); } } else S.f = Math.min(FR-1, S.f + dt*FPS);
   rFrame(); if (S.f >= FR-1) setPlaying(false); else requestAnimationFrame(tick); }
@@ -216,26 +218,142 @@ function setPlaying(p) { S.playing = p; $('#play').textContent = p ? 'Pause' : '
 /* ---------- steps & wiring ---------- */
 function all() { rOut(); rFlow(); rBoom(); rEq(); }
 function go(n) { n = clamp(n, 0, 4); if (S.playing) setPlaying(false); S.step = n; scene.dataset.step = n; focusKey = null;
+  // Expose an explicit local-alert preview option after a location has been selected.
+  if (n === 0) $('#alert-preview').hidden = true;
   document.querySelectorAll('.panel').forEach(p => p.hidden = +p.dataset.panel !== n);
   document.querySelectorAll('#stepper button').forEach((b, i) => { b.removeAttribute('aria-current'); if (i === n) b.setAttribute('aria-current', 'step'); b.classList.toggle('done', i < n); });
   $('#progress-bar').style.width = (n+1)*20 + '%'; $('#badge').textContent = BADGES[n]; $('#prev').disabled = n === 0; $('#next').disabled = n === 4;
   $('#live').textContent = `Step ${n+1} of 5: ${TITLES[n]}`; G.oil.style.display = n === 4 ? '' : 'none';
   if (n === 4) { if (S.dirty || !sim) simulate(); S.f = 0; lastStatus = ''; }
-  all(); if (n === 4) rFrame(); }
+  all(); if (n === 4) rFrame(); if (!$('#alert-preview').hidden) updateAlertDraft(); }
 function dirUi() { $('#o-dir').textContent = `${S.dir}° → ${card(S.dir)} (assumed)`; $('#compass-arrow').setAttribute('transform', `rotate(${S.dir})`); }
 function syncInputs() { $('#drift-dir').value = S.dir; ['boom','skim','sorb'].forEach(k => $('#use-' + k).checked = S.use[k]); dirUi(); }
-$('#drift-dir').addEventListener('input', e => { S.dir = +e.target.value; S.dirty = true; dirUi(); rFlow(); });
+$('#drift-dir').addEventListener('input', e => { S.dir = +e.target.value; S.dirty = true; dirUi(); rFlow(); if (!$('#alert-preview').hidden) updateAlertDraft(); });
+$('#prepare-alert').addEventListener('click', () => {
+  $('#alert-preview').hidden = false;
+  updateAlertDraft();
+  $('#alert-preview').scrollIntoView({ behavior: RM.matches ? 'auto' : 'smooth', block: 'nearest' });
+});
+const alertAgencyNames = {
+  icg: 'Indian Coast Guard', state: 'Tamil Nadu / district authorities',
+  port: 'Relevant port / oil-handling facility', incois: 'ESSO-INCOIS · OOSA'
+};
+const alertAgencyRequests = {
+  icg: 'Review the possible marine pollution lead and advise which response authority should coordinate.',
+  state: 'Confirm shoreline jurisdiction and whether local shoreline observation is appropriate.',
+  port: 'Confirm whether the location is within your jurisdiction and identify the facility response contact.',
+  incois: 'Advise which verified coordinates and environmental inputs are needed for an OOSA trajectory advisory.'
+};
+let routedAlertText = null;
+function selectedAlertAgencies() { return [...document.querySelectorAll('.alert-recipient:checked')].map(x => x.value); }
+function noticeSceneSnapshot() {
+  const shot=document.createElement('canvas'); shot.width=W; shot.height=H;
+  const c=shot.getContext('2d');
+  try { c.drawImage(scene.dataset.base==='map' ? canvas : photo,0,0,W,H); } catch { c.fillStyle='#153b42';c.fillRect(0,0,W,H); }
+  const curve=new Path2D(smooth(S.out));
+  if (S.step===4 && sim) {
+    const i0=Math.floor(S.f),i1=Math.min(i0+1,FR-1),a=S.f-i0,A=sim.frames[i0],B=sim.frames[i1];
+    for(let i=0;i<sim.radii.length;i++){const mass=A[i*3+2]+(B[i*3+2]-A[i*3+2])*a;if(mass<.04)continue;c.beginPath();c.arc(A[i*3]+(B[i*3]-A[i*3])*a,A[i*3+1]+(B[i*3+1]-A[i*3+1])*a,Math.max(1,sim.radii[i]*.72*Math.sqrt(mass)),0,Math.PI*2);c.fillStyle='rgba(8,10,8,.76)';c.fill();}
+  } else { c.fillStyle='rgba(5,10,9,.42)';c.fill(curve); }
+  c.save();c.setLineDash([3,5]);c.lineWidth=3;c.strokeStyle='#ffb629';c.stroke(curve);c.restore();
+  const f=geo();
+  if(S.use.boom){c.beginPath();f.ring.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.lineWidth=5;c.strokeStyle='#2ee6d0';c.stroke();}
+  c.save();c.strokeStyle='rgba(46,230,208,.92)';c.fillStyle='rgba(46,230,208,.92)';c.lineWidth=4;
+  [[-30,95],[0,115],[30,85]].forEach(([side,len])=>{const x=f.F[0]+f.d[0]*22+f.p[0]*side,y=f.F[1]+f.d[1]*22+f.p[1]*side,ex=x+f.d[0]*len,ey=y+f.d[1]*len;c.beginPath();c.moveTo(x,y);c.lineTo(ex,ey);c.stroke();const ang=Math.atan2(f.d[1],f.d[0]);c.beginPath();c.moveTo(ex,ey);c.lineTo(ex-12*Math.cos(ang-.55),ey-12*Math.sin(ang-.55));c.lineTo(ex-12*Math.cos(ang+.55),ey-12*Math.sin(ang+.55));c.closePath();c.fill();});c.restore();
+  S.eq.forEach(q=>{if(q.t==='skimmer'&&!S.use.skim||q.t==='sorbent'&&!S.use.sorb)return;c.beginPath();c.arc(q.x,q.y,13,0,Math.PI*2);c.fillStyle=q.t==='skimmer'?'#8fd0ff':'#d6a6ff';c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke();c.fillStyle='#10202a';c.font='bold 13px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText(q.t==='skimmer'?'S':'A',q.x,q.y);});
+  return shot.toDataURL('image/png');
+}
+function renderNoticeSimulation({skimmers, sorbents, direction, tactics, recipients, confirmed}) {
+  const root = $('#notice-simulation'); root.replaceChildren(); root.classList.toggle('routed', Boolean(routedAlertText));
+  const facts = document.createElement('div'); facts.className = 'notice-fact-grid';
+  const location = document.createElement('article'); location.className = 'notice-fact location-fact';
+  location.innerHTML = `<small>WHERE IS THE EXERCISE?</small><b>Ennore coast</b><span>Chennai, Tamil Nadu · approximate area${confirmed ? ' · confirmed for this exercise' : ''}</span><i class="location-pulse" aria-hidden="true"></i>`;
+  facts.appendChild(location);
+  const evidence = document.createElement('article'); evidence.className = 'notice-fact evidence-fact';
+  evidence.innerHTML = `<small>WHAT WAS MARKED?</small>`;
+  const preview = document.createElement('img'); preview.className='brief-scene-preview'; preview.src=noticeSceneSnapshot(); preview.alt='Ennore response demo snapshot showing the current spill outline, assumed flow direction, boom, and selected recovery equipment'; evidence.appendChild(preview);
+  facts.appendChild(evidence);
+  const drift=document.createElement('article'); drift.className='notice-fact drift-fact'; drift.innerHTML=`<small>WHERE COULD IT MOVE?</small>`;
+  const compass=document.createElement('div'); compass.className='brief-compass'; compass.innerHTML='<i></i><span>N</span>'; compass.querySelector('i').style.transform=`rotate(${S.dir}deg)`;
+  const words={N:'north',NNE:'north-northeast',NE:'northeast',ENE:'east-northeast',E:'east',ESE:'east-southeast',SE:'southeast',SSE:'south-southeast',S:'south',SSW:'south-southwest',SW:'southwest',WSW:'west-southwest',W:'west',WNW:'west-northwest',NW:'northwest',NNW:'north-northwest'};
+  const driftText=document.createElement('b'); driftText.textContent=`Toward ${words[card(S.dir)]} (assumed)`; drift.append(compass,driftText); facts.appendChild(drift);
+  root.appendChild(facts);
+}
+function renderAlertTimeline(routed = false, acknowledged = 0, total = 0) {
+  const timeline = $('#alert-timeline'); timeline.replaceChildren();
+  const allAcked = routed && total > 0 && acknowledged === total;
+  const items = [
+    ['Exercise lead reviewed', true],
+    ['Ennore exercise location confirmed', $('#confirm-ennore').checked],
+    ['Notice routed (simulated)', routed],
+    [allAcked ? `All ${total} groups acknowledged (simulated)` : `Agency acknowledgements (${acknowledged}/${total})`, allAcked]
+  ];
+  items.forEach(([label, complete], i) => {
+    const confirmed = $('#confirm-ennore').checked;
+    const current = (!confirmed && i === 1) || (confirmed && !routed && i === 2) || (routed && !allAcked && i === 3);
+    const item = document.createElement('div'); item.className = 'timeline-item ' + (complete ? 'complete' : (current ? 'current' : 'pending'));
+    const dot = document.createElement('i'); dot.setAttribute('aria-hidden','true');
+    const text = document.createElement('span'); text.textContent = label;
+    item.append(dot,text); timeline.appendChild(item);
+  });
+}
+function updateAlertDraft() {
+  const confirmed = $('#confirm-ennore').checked;
+  const recipients = selectedAlertAgencies();
+  ensureEq();
+  const skimmers = S.eq.filter(q => q.t === 'skimmer').length;
+  const sorbents = S.eq.filter(q => q.t === 'sorbent').length;
+  const direction = `${S.dir}° toward ${card(S.dir)} (assumed)`;
+  const tactics = `${S.use.boom ? 'boom on' : 'boom off'}; ${S.use.skim ? skimmers + ' skimmer marker(s)' : 'skimmers off'}; ${S.use.sorb ? sorbents + ' sorbent marker(s)' : 'sorbents off'}`;
+  const outline = S.out.map(([x,y]) => `${x.toFixed(0)},${y.toFixed(0)}`).join(' · ');
+  const markers = S.eq.map(q => `${q.t === 'skimmer' ? 'Skimmer' : 'Sorbent'} (${q.x.toFixed(0)},${q.y.toFixed(0)})`).join('; ');
+  const draft = `EXERCISE NOTICE EX-ENNORE-01 · INFORMATION ONLY\nStatus: historical Ennore oil-spill image used for a response exercise.\nArea: Ennore coast, Chennai, Tamil Nadu. Location precision: locality only; supplied image has no GPS coordinates.\nEvidence: user-adjusted outline on the 11 Dec 2023 comparison image (after panel). This is image-based interpretation, not live satellite detection.\nConditions: surface drift ${direction}; scenario assumption, not measured environmental data.\nResponse layout: ${tactics}.\nOutline vertices in image pixels (not geographic coordinates): ${outline}\nEquipment markers in image pixels: ${markers || 'none'}\nCoordination requested: verify the exact location and jurisdiction before operational action. Agency-specific requests are listed in the dispatch record.\nSelected groups: ${recipients.map(k => alertAgencyNames[k]).join('; ') || 'none'}.\nSIMULATION ONLY — no real message is sent.`;
+  if (routedAlertText && draft !== routedAlertText) {
+    routedAlertText = null; $('#alert-delivery').hidden = true; $('#alert-delivery').replaceChildren();
+    $('#send-demo-alert').textContent = 'Simulate alert routing'; $('#send-demo-alert').disabled = !confirmed || recipients.length === 0;
+  }
+  $('#alert-message').value = draft;
+  $('#brief-tactics').textContent = `In this exercise, the assumed movement is ${direction}. The current plan shows ${S.use.boom ? 'a boom' : 'no boom'}, ${S.use.skim ? skimmers + ' skimmer markers' : 'no skimmers'}, and ${S.use.sorb ? sorbents + ' sorbent markers' : 'no sorbents'}.`;
+  renderNoticeSimulation({skimmers,sorbents,direction,tactics,recipients,confirmed});
+  $('#send-demo-alert').disabled = !confirmed || recipients.length === 0;
+  renderAlertTimeline(Boolean(routedAlertText));
+}
+$('#confirm-ennore').addEventListener('change', updateAlertDraft);
+document.querySelectorAll('.alert-recipient').forEach(input => input.addEventListener('change', updateAlertDraft));
+$('#send-demo-alert').addEventListener('click', () => {
+  const delivery = $('#alert-delivery'); delivery.replaceChildren(); delivery.hidden = false;
+  routedAlertText = $('#alert-message').value;
+  $('#notice-simulation').classList.add('routed');
+  const simTime = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const heading = document.createElement('h3'); heading.textContent = 'Dispatch record · EX-ENNORE-01'; delivery.appendChild(heading);
+  const info = document.createElement('p'); info.textContent = `Simulated at ${simTime} · in-app exercise routing only · no message left this page.`; delivery.appendChild(info);
+  const agencies = selectedAlertAgencies(); let acknowledged = 0;
+  const refreshTimeline = () => renderAlertTimeline(true, acknowledged, agencies.length);
+  agencies.forEach(key => {
+    const row = document.createElement('div'); row.className = 'delivery-row';
+    const copy = document.createElement('div'); copy.className = 'delivery-copy';
+    const details = document.createElement('b'); details.textContent = `${alertAgencyNames[key]} · Simulated delivered · awaiting acknowledgement`; copy.appendChild(details);
+    const request = document.createElement('small'); request.textContent = 'Requested follow-up: ' + alertAgencyRequests[key]; copy.appendChild(request);
+    row.appendChild(copy);
+    const ack = document.createElement('button'); ack.type = 'button'; ack.className = 'btn'; ack.textContent = 'Simulate acknowledgement';
+    ack.addEventListener('click', () => { details.textContent = `${alertAgencyNames[key]} · Acknowledged at ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} (simulated)`; ack.disabled = true; ack.textContent = 'Acknowledged'; acknowledged += 1; refreshTimeline(); });
+    row.appendChild(ack); delivery.appendChild(row);
+  });
+  refreshTimeline();
+  $('#send-demo-alert').textContent = 'Routed · exercise only';
+  $('#send-demo-alert').disabled = true;
+});
 document.querySelectorAll('#stepper button').forEach(b => b.addEventListener('click', () => go(+b.dataset.go)));
 $('#prev').addEventListener('click', () => go(S.step - 1)); $('#next').addEventListener('click', () => go(S.step + 1));
 document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => setBase(b.dataset.base)));
-$('#reset-out').addEventListener('click', () => { S.out = copy(DEF_OUT); S.dirty = true; rOut(); });
-$('#reset-eq').addEventListener('click', () => { S.eqCustom = false; S.eq = null; S.dirty = true; rEq(); });
+$('#reset-out').addEventListener('click', () => { S.out = copy(DEF_OUT); S.dirty = true; rOut(); if (!$('#alert-preview').hidden) updateAlertDraft(); });
+$('#reset-eq').addEventListener('click', () => { S.eqCustom = false; S.eq = null; S.dirty = true; rEq(); if (!$('#alert-preview').hidden) updateAlertDraft(); });
 $('#reset-all').addEventListener('click', () => { S.out = copy(DEF_OUT); S.dir = 285; S.eq = null; S.eqCustom = false; S.use = { boom: true, skim: true, sorb: true }; S.f = 0; S.dirty = true; syncInputs(); go(0); });
 $('#play').addEventListener('click', () => setPlaying(!S.playing));
 $('#replay').addEventListener('click', () => { S.f = 0; lastStatus = ''; if (S.dirty || !sim) simulate(); setPlaying(true); });
 $('#scrub').max = FR - 1;
 $('#scrub').addEventListener('input', e => { if (S.playing) setPlaying(false); if (S.dirty || !sim) simulate(); S.f = +e.target.value; rFrame(); });
-['boom','skim','sorb'].forEach(k => $('#use-' + k).addEventListener('change', e => { S.use[k] = e.target.checked; S.dirty = true; const was = S.playing; simulate(); rBoom(); rEq(); rFrame(); if (was) setPlaying(true); }));
+['boom','skim','sorb'].forEach(k => $('#use-' + k).addEventListener('change', e => { S.use[k] = e.target.checked; S.dirty = true; const was = S.playing; simulate(); rBoom(); rEq(); rFrame(); if (was) setPlaying(true); if (!$('#alert-preview').hidden) updateAlertDraft(); }));
 function resize() { const k = clamp(W / (svg.clientWidth || W), .9, 2.2); if (Math.abs(k - K) > .02) { K = k; all(); } }
 new ResizeObserver(resize).observe(svg);
 if (RM.addEventListener) RM.addEventListener('change', () => { if (S.step === 4) rFrame(); });
