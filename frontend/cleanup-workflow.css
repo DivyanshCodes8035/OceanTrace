@@ -221,3 +221,22 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
   .flow-dash,.eq.work .pulse{animation:none!important}
   .flow-dash{stroke-dasharray:none}
 }
+
+/* Readability pass for the current response exercise layout */
+body { font-size: 17px; line-height: 1.55; }
+.top { font-size: 1rem; }
+.brand { font-size: 1.2rem; }
+.nav a { font-size: 1rem; }
+.eyebrow { font-size: .85rem; }
+.intro-copy h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.15; }
+.intro-copy p { font-size: 1.15rem; line-height: 1.6; }
+.launch-demo { font-size: 1.12rem; }
+.panel h2, .workflow-heading h2 { font-size: 1.4rem; line-height: 1.3; }
+.panel p, .panel label, .panel button, .panel output, .workflow-table td, .workflow-table th { font-size: 1rem; line-height: 1.55; }
+.workflow-table thead th { font-size: .85rem; }
+.workflow-table tbody th small, .workflow-caveat, .fine, .attrib { font-size: .9rem; line-height: 1.5; }
+@media (max-width: 620px) {
+  body { font-size: 16px; }
+  .intro-copy h1 { font-size: 2rem; }
+  .panel h2, .workflow-heading h2 { font-size: 1.25rem; }
+}
