@@ -16,7 +16,7 @@ from rasterio.warp import transform_geom
 from scipy import ndimage
 
 MODEL_PATH = Path(__file__).resolve().parents[2] / "models" / "oil_slick_tinyunet_v1.pt"
-MODEL_VERSION = "waketrace-slick-screen-v1"
+MODEL_VERSION = "oceantrace-slick-screen-v1"
 
 
 def detect_ai_slick_candidates(scene_path: str | Path, *, band: int = 1,

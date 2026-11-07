@@ -16,7 +16,7 @@ from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer,
 def build_response_report_pdf(report: dict[str, Any]) -> bytes:
     output = BytesIO()
     doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18 * mm, leftMargin=18 * mm,
-                            topMargin=17 * mm, bottomMargin=17 * mm, title="WakeTrace Response Assessment")
+                            topMargin=17 * mm, bottomMargin=17 * mm, title="OceanTrace Response Assessment")
     base = getSampleStyleSheet()
     title = ParagraphStyle("WTTitle", parent=base["Title"], fontName="Helvetica-Bold", fontSize=18,
                            leading=22, textColor=colors.HexColor("#12364a"), alignment=TA_LEFT, spaceAfter=5)
@@ -28,7 +28,7 @@ def build_response_report_pdf(report: dict[str, Any]) -> bytes:
                           textColor=colors.HexColor("#243b49"), spaceAfter=3)
     small = ParagraphStyle("WTSmall", parent=body, fontSize=7, leading=9, textColor=colors.HexColor("#5e707b"))
     story: list[Any] = [
-        Paragraph("WakeTrace Response Assessment", title),
+        Paragraph("OceanTrace Response Assessment", title),
         Paragraph("Incident context · environmental exposure · proposed actions", subtitle),
         HRFlowable(width="100%", thickness=1.2, color=colors.HexColor("#20aa9e")),
         Spacer(1, 6),

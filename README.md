@@ -17,18 +17,18 @@ The Response exercise is a separate educational workflow based on a historical i
 
 ## Quick start on Windows
 
-1. Install Python 3.10 or newer.
+1. Install Python 3.11 or newer.
 2. In PowerShell from the project folder, create the environment and install requirements:
    ```powershell
    python -m venv .venv
    .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
    ```
-3. Double-click [Start OceanTrace.bat](Start%20OceanTrace.bat). Keep both command windows open. It starts the API on port **8002**, serves the site on port **8081**, and opens the response exercise.
+3. Double-click [Start OceanTrace.bat](Start%20OceanTrace.bat). Keep the server window open. It serves the API and website together on port **8081** and opens the Overview page.
 4. Use the guided steps on the page to explore the demo.
 
-Check the API at [http://localhost:8002/api/health](http://localhost:8002/api/health). Interactive API documentation is at [http://localhost:8002/docs](http://localhost:8002/docs).
+Check the API at [http://localhost:8081/api/health](http://localhost:8081/api/health). Interactive API documentation is at [http://localhost:8081/docs](http://localhost:8081/docs).
 
-If the browser reports a connection error, confirm that both launcher windows are still running and that ports 8002 and 8081 are available. Opening frontend/index.html directly as a file:// URL does not start the API; use the launcher or the manual steps below. Leaflet and OpenStreetMap map tiles need internet access and may be unavailable if a network or tile service blocks requests.
+If the browser reports a connection error, confirm that the launcher server window is still running and port 8081 is available. The launcher can use the project environment or an available system Python with the dependencies installed. Opening frontend/index.html directly as a file:// URL does not start the API; use the launcher or the manual steps below. Leaflet and OpenStreetMap map tiles need internet access and may be unavailable if a network or tile service blocks requests.
 
 ## Free hosted demo on Render
 
@@ -42,18 +42,11 @@ The free service sleeps after 15 minutes without traffic and can take about a mi
 
 ### Manual start
 
-Open two PowerShell terminals from the project folder. In the first:
+From the project folder, start the combined local API and website server:
 
-    Set-Location backend
-    python -m pip install -r requirements.txt
-    python -m uvicorn app.api.main:app --reload --port 8002
+    .\.venv\Scripts\python.exe -m uvicorn app.api.main:app --app-dir backend --reload --host 127.0.0.1 --port 8081
 
-In the second:
-
-    Set-Location frontend
-    python -m http.server 8080
-
-Then open [http://localhost:8080](http://localhost:8080). The API and website are separate local services; leave both terminals running while you use the app.
+Then open [http://127.0.0.1:8081/cleanup-workflow.html?mode=demo](http://127.0.0.1:8081/cleanup-workflow.html?mode=demo). The API and website share this one local server; keep that terminal running while you use the app.
 
 ## Guided demo: nine visual steps
 
@@ -94,10 +87,10 @@ The Map also offers **Run simulated case** for an offline practice scene. When a
 Use this workflow when reviewing an actual scene. The six visual demo steps above are illustrative; they do not replace the real-data review below.
 
 1. **Choose an area and date range.** On Map, move and zoom the map to the ocean area, then use **Use current map area** or enter west, south, east, and north coordinates. Choose Sentinel-1 polarization (VV or VH) and dates. **Find newest scene automatically** searches the current map area over the latest 32 days. Manual searches are limited to 32 days; scene processing accepts a maximum 2.5° by 2.5° area.
-2. **Find and load a Sentinel-1 scene.** Search the Copernicus Data Space catalog and select a Sentinel-1 GRD result. Catalog search is public; downloading and processing the image uses a Sentinel Hub OAuth client. WakeTrace displays the image and runs the rule-based dark-feature screen plus the experimental AI screen.
+2. **Find and load a Sentinel-1 scene.** Search the Copernicus Data Space catalog and select a Sentinel-1 GRD result. Catalog search is public; downloading and processing the image uses a Sentinel Hub OAuth client. OceanTrace displays the image and runs the rule-based dark-feature screen plus the experimental AI screen.
 3. **Review possible slick-like areas.** Compare the amber rule-based outlines and purple AI outlines with the radar image, acquisition time, and provenance. The AI was trained on Gulf of Mexico examples and has not been validated for Mauritius. Wind, rain, waves, wakes, land, or other effects can resemble oil. Neither screen confirms oil; the AI score and dark-feature review score are not probabilities. Select an area before proceeding.
-4. **Estimate a possible origin.** Ask WakeTrace to backtrack an OpenDrift OpenOil ensemble using hourly Open-Meteo ERA5 10 m winds and ERA5-Ocean currents. The default search horizon is 24 hours; the API accepts 6–120 hours and ensemble sizes of 50–2,000 (default 300). Review the origin area, release search window, model assumptions, and input sources. The configured horizon is the search interval; it is not a measured spill duration or release time.
-5. **Review vessel information.** WakeTrace can query optional Global Fishing Watch AIS presence for the modeled area and dates. These are daily grid-cell presence leads, not exact positions or continuous routes. For a detailed comparison, provide an authorized AIS CSV with columns vessel_id, timestamp, longitude, and latitude; position_accuracy_m is optional. Enter the actual provider and dataset. The matcher compares reported tracks against the origin area, release window, and sampled particle corridor where timestamps align. It does not fetch commercial AIS data.
+4. **Estimate a possible origin.** Ask OceanTrace to backtrack an OpenDrift OpenOil ensemble using hourly Open-Meteo ERA5 10 m winds and ERA5-Ocean currents. The default search horizon is 24 hours; the API accepts 6–120 hours and ensemble sizes of 50–2,000 (default 300). Review the origin area, release search window, model assumptions, and input sources. The configured horizon is the search interval; it is not a measured spill duration or release time.
+5. **Review vessel information.** OceanTrace can query optional Global Fishing Watch AIS presence for the modeled area and dates. These are daily grid-cell presence leads, not exact positions or continuous routes. For a detailed comparison, provide an authorized AIS CSV with columns vessel_id, timestamp, longitude, and latitude; position_accuracy_m is optional. Enter the actual provider and dataset. The matcher compares reported tracks against the origin area, release window, and sampled particle corridor where timestamps align. It does not fetch commercial AIS data.
 6. **Assess, save, and revisit the case.** Review the Map, case provenance, coverage gaps, ranking factors, and uncertainty. Save a reviewed real-data case from Map; the API stores it under data/cases/. Reopen a case through its case link/query. A high rank is a screening priority only. Missing AIS reports do not show that a vessel was absent, and no result assigns responsibility.
 
 
@@ -124,7 +117,7 @@ For the automatic daily presence query, configure GFW_API_TOKEN in the project-r
 
 ## Data, assumptions, and limitations
 
-- **Radar screening:** The rule-based detector screens calibrated Sentinel-1 sigma0 backscatter GeoTIFFs in dB for connected dark regions. The separate experimental AI model, **WakeTrace experimental Sentinel-1 slick-like TinyUNet v1**, was trained on 173 labeled Sentinel-1 tiles from Cantarell in the Gulf of Mexico (108 train, 43 validation, 22 held-out test). Its held-out test slick IoU was 0.618; this in-domain result does not establish performance in Mauritius. Model scores are not oil probabilities. Neither screen confirms oil. No real satellite scene is bundled with the project. See the [model card](backend/models/MODEL_CARD.md) and [training report](backend/models/oil_slick_training_report.json).
+- **Radar screening:** The rule-based detector screens calibrated Sentinel-1 sigma0 backscatter GeoTIFFs in dB for connected dark regions. The separate experimental AI model, **OceanTrace experimental Sentinel-1 slick-like TinyUNet v1**, was trained on 173 labeled Sentinel-1 tiles from Cantarell in the Gulf of Mexico (108 train, 43 validation, 22 held-out test). Its held-out test slick IoU was 0.618; this in-domain result does not establish performance in Mauritius. Model scores are not oil probabilities. Neither screen confirms oil. No real satellite scene is bundled with the project. See the [model card](backend/models/MODEL_CARD.md) and [training report](backend/models/oil_slick_training_report.json).
 - **Drift:** OpenDrift backtracks a particle ensemble using Open-Meteo ERA5 and ERA5-Ocean reanalysis. Approximate grid spacing is about 25 km for wind and 50 km for current. Coastal circulation, waves, shoreline effects, oil properties, and forcing uncertainty limit precision; this is not an operational spill forecast.
 - **Vessel presence:** Global Fishing Watch results are aggregated daily cells and can have incomplete coverage. A cell center is approximate and must not be drawn as a precise vessel route.
 - **Detailed AIS matching:** Scores and candidate order are review aids, not probabilities. Short gaps may be interpolated only under matcher limits; long gaps and implausible jumps break route segments. A match does not prove a vessel caused a release.
@@ -150,7 +143,7 @@ See [docs/data-contract.md](docs/data-contract.md) for the case schema, result d
 
 ## API reference
 
-The API runs on port 8002. Full schemas are shown at http://localhost:8002/docs.
+The local API and website share port 8081. Full schemas are shown at http://localhost:8081/docs.
 
 | Method and path | Purpose |
 | --- | --- |

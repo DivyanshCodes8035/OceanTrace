@@ -1,4 +1,4 @@
-"""Oil-drift backtracking for WakeTrace case records."""
+"""Oil-drift backtracking for OceanTrace case records."""
 
 from .simulation import DriftInputError, estimate_origin
 

@@ -1,4 +1,4 @@
-"""Run a clearly synthetic end-to-end example of the WakeTrace drift module.
+"""Run a clearly synthetic end-to-end example of the OceanTrace drift module.
 
 This example uses artificial constant wind/current and an invented slick
 polygon. Its output must not be treated as an observed event or used as a case.

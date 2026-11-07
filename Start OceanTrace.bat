@@ -4,9 +4,15 @@ set "PROJECT_ROOT=%~dp0"
 set "PYTHON=%PROJECT_ROOT%.venv\Scripts\python.exe"
 
 if not exist "%PYTHON%" (
-  echo OceanTrace virtual environment not found. Create it and install backend requirements first.
-  pause
-  exit /b 1
+  where python >nul 2>nul
+  if errorlevel 1 (
+    echo Python was not found. Install Python 3.11, then create the project environment with:
+    echo python -m venv .venv
+    echo .venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+    pause
+    exit /b 1
+  )
+  set "PYTHON=python"
 )
 
 if not exist "%PROJECT_ROOT%backend\app\api\main.py" (
@@ -19,13 +25,22 @@ if not exist "%PROJECT_ROOT%frontend\index.html" (
   pause
   exit /b 1
 )
+pushd "%PROJECT_ROOT%backend"
+"%PYTHON%" -c "import app.api.main" >nul 2>nul
+if errorlevel 1 (
+  popd
+  echo OceanTrace dependencies are missing or failed to import.
+  echo Install them with: .venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+  pause
+  exit /b 1
+)
+popd
 
 echo Starting OceanTrace API and website...
-start "OceanTrace API - port 8002" /D "%PROJECT_ROOT%backend" "%PYTHON%" -m uvicorn app.api.main:app --host 127.0.0.1 --port 8002
-start "OceanTrace Website - port 8081" /D "%PROJECT_ROOT%frontend" "%PYTHON%" -m http.server 8081 --bind 127.0.0.1
+start "OceanTrace - port 8081" /D "%PROJECT_ROOT%backend" "%PYTHON%" -m uvicorn app.api.main:app --host 127.0.0.1 --port 8081
 
-timeout /t 3 /nobreak >nul
-start "" "http://127.0.0.1:8081/cleanup-workflow.html?mode=demo"
+timeout /t 5 /nobreak >nul
+start "" "http://127.0.0.1:8081/index.html"
 endlocal
 
 

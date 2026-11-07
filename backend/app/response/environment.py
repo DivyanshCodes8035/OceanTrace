@@ -79,7 +79,7 @@ way(around:75000,{latitude:.4f},{longitude:.4f})["natural"="coastline"]->.coast;
 .sensitive out center tags;"""
 
     timeout = httpx.Timeout(32.0, connect=12.0)
-    async with httpx.AsyncClient(timeout=timeout, headers={"User-Agent": "WakeTrace/0.2 (local response-planning prototype)"}) as client:
+    async with httpx.AsyncClient(timeout=timeout, headers={"User-Agent": "OceanTrace/0.2 (local response-planning prototype)"}) as client:
         try:
             marine_response, weather_response = await asyncio.gather(
                 client.get(MARINE_URL, params=marine_params),

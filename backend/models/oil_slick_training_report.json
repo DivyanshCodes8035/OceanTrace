@@ -1,5 +1,5 @@
 {
-  "model": "WakeTrace experimental Sentinel-1 slick-like TinyUNet v1",
+  "model": "OceanTrace experimental Sentinel-1 slick-like TinyUNet v1",
   "architecture": "Two-class TinyUNet, base_ch=8, 300x400 inputs",
   "dataset": "Garcia et al. (2026), INPE Oil Spill Segmentation Dataset, CC BY 4.0, https://github.com/Garcia-INPE/oilspill-detection-dataset",
   "split_counts": {

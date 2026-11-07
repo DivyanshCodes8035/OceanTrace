@@ -1,4 +1,4 @@
-/* WakeTrace · Response exercise · Ennore (illustrative simulation on a historical photo)
+/* OceanTrace · Response exercise · Ennore (illustrative simulation on a historical photo)
    Self-contained. Overlay coordinates live in the 618×606 viewBox of the after-spill image. */
 (() => {
 'use strict';

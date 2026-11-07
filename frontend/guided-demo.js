@@ -1,4 +1,4 @@
-/* WakeTrace guided, button-led simulation (v2: professional rendering).
+/* OceanTrace guided, button-led simulation (v2: professional rendering).
    Loads AFTER map-page.js. Reuses the page's map, result data and helpers; draws its own
    canvas scene (feathered slick, oil plume, routes, wakes) and vessel markers.
    Add ?guided=0 to the URL to get the classic page back. */
@@ -644,7 +644,7 @@
 
   const STEPS = [
     { label: "Find probable slick", dwell: 3500, title: "1 · Find the probable slick",
-      text: "Satellite radar (SAR) makes calm, oil-smoothed water look dark. WakeTrace screens the image for dark patches and measures the area. Dark does not always mean oil (wind shadows and algae look similar), so this is only a possible slick." },
+      text: "Satellite radar (SAR) makes calm, oil-smoothed water look dark. OceanTrace screens the image for dark patches and measures the area. Dark does not always mean oil (wind shadows and algae look similar), so this is only a possible slick." },
     { label: "Wind", dwell: 6500, title: "2 · Wind (what-if)",
       text: "Wind pushes floating oil too. A common rule of thumb is that oil moves with about 3% of the wind speed on top of the current. Use the slider and watch the orange oil path bend away from the teal current-only path. The origin and vessel ranking in later steps still use the calm-wind backend run." },
     { label: "Water flow", dwell: 4500, title: "3 · Water flow (current)",
@@ -1057,7 +1057,7 @@
 
   function stepWarning() {
     try {
-      sessionStorage.setItem("waketrace-response-context", JSON.stringify({
+      sessionStorage.setItem("oceantrace-response-context", JSON.stringify({
         synthetic: true,
         caseLabel: result.simulation?.label || "Guided practice case",
         candidateCount: result.detection?.candidates?.length || 0,

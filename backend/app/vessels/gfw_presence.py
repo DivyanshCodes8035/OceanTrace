@@ -79,11 +79,11 @@ async def search_gfw_presence(drift: dict[str, Any]) -> dict[str, Any]:
         raise AISPresenceError("Global Fishing Watch took too long to return AIS presence. Try again shortly.") from exc
     except httpx.ConnectError as exc:
         raise AISPresenceError(
-            "WakeTrace could not resolve or connect to the Global Fishing Watch API. "
+            "OceanTrace could not resolve or connect to the Global Fishing Watch API. "
             "Check this computer's internet, DNS, or proxy connection, then retry."
         ) from exc
     except httpx.RequestError as exc:
-        raise AISPresenceError("WakeTrace could not connect to Global Fishing Watch. Check internet access and try again.") from exc
+        raise AISPresenceError("OceanTrace could not connect to Global Fishing Watch. Check internet access and try again.") from exc
 
     if response.status_code == 401:
         raise AISPresenceError(
@@ -99,7 +99,7 @@ async def search_gfw_presence(drift: dict[str, Any]) -> dict[str, Any]:
     if response.status_code == 503:
         raise AISPresenceError(
             "Global Fishing Watch's report service is temporarily unavailable (HTTP 503). "
-            "WakeTrace reached GFW; retry later. This is not a token rejection."
+            "OceanTrace reached GFW; retry later. This is not a token rejection."
         )
     if response.status_code >= 400:
         raise AISPresenceError(

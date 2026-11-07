@@ -20,7 +20,6 @@ from typing import Any
 import rasterio
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
@@ -44,18 +43,10 @@ SAVED_CASES_DIR = PROJECT_ROOT / "data" / "cases"
 load_dotenv(PROJECT_ROOT / ".env")
 
 app = FastAPI(
-    title="WakeTrace API",
+    title="OceanTrace API",
     version="0.1.0",
     description="Prototype API for reviewing synthetic maritime pollution investigation cases.",
 )
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
-
-
 def load_demo_case() -> dict[str, Any]:
     with DEMO_CASE_PATH.open("r", encoding="utf-8") as case_file:
         return json.load(case_file)
@@ -89,7 +80,7 @@ class ResponseReportRequest(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "waketrace-api"}
+    return {"status": "ok", "service": "oceantrace-api"}
 
 
 @app.post("/api/environment/assess")
@@ -109,7 +100,7 @@ def download_response_report(request: ResponseReportRequest) -> Response:
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Could not generate the response PDF.") from exc
     return Response(content=pdf_bytes, media_type="application/pdf",
-                    headers={"Content-Disposition": "attachment; filename=WakeTrace-response-report.pdf"})
+                    headers={"Content-Disposition": "attachment; filename=OceanTrace-response-report.pdf"})
 
 
 @app.get("/api/cases/{case_id}")
@@ -193,7 +184,7 @@ def send_incident_notification(request: NotificationSendRequest) -> dict[str, An
     username = os.getenv("WAKE_TRACE_SMTP_USERNAME", "")
     password = os.getenv("WAKE_TRACE_SMTP_PASSWORD", "")
     if not host or not sender or not username or not password:
-        raise HTTPException(status_code=503, detail="Email delivery is not configured on this WakeTrace server.")
+        raise HTTPException(status_code=503, detail="Email delivery is not configured on this OceanTrace server.")
     try:
         port = int(os.getenv("WAKE_TRACE_SMTP_PORT", "587"))
     except ValueError as exc:
@@ -203,12 +194,12 @@ def send_incident_notification(request: NotificationSendRequest) -> dict[str, An
 
     notification_id = "WT-" + uuid.uuid4().hex[:10].upper()
     message = EmailMessage()
-    message["Subject"] = f"WakeTrace incident coordination notice · {request.case_id}"
+    message["Subject"] = f"OceanTrace incident coordination notice · {request.case_id}"
     message["From"] = sender
     message["To"] = sender
     message["Bcc"] = ", ".join(recipients)
     message.set_content(
-        "WakeTrace incident coordination notice\n\n"
+        "OceanTrace incident coordination notice\n\n"
         f"Case reference: {request.case_id}\n"
         f"Incident jurisdiction (confirmed by approver): {request.jurisdiction.strip()}\n"
         f"Authorized approver: {request.authorized_approver.strip()}\n"
@@ -224,7 +215,7 @@ def send_incident_notification(request: NotificationSendRequest) -> dict[str, An
     except Exception as exc:
         raise HTTPException(status_code=422, detail="The response PDF could not be prepared, so no notification was sent.") from exc
     message.add_attachment(report_bytes, maintype="application", subtype="pdf",
-                           filename=f"WakeTrace-response-{request.case_id}.pdf")
+                           filename=f"OceanTrace-response-{request.case_id}.pdf")
     try:
         with smtplib.SMTP(host, port, timeout=20) as client:
             client.ehlo()
@@ -410,7 +401,7 @@ def offline_synthetic_practice(selection: OfflinePracticeRequest) -> dict[str, A
         "id": "OFFLINE-SYNTHETIC-PRACTICE",
         "source": "Locally generated synthetic radar-style practice scene",
         "datetime": acquired_at,
-        "dataset": "WakeTrace synthetic practice raster",
+        "dataset": "OceanTrace synthetic practice raster",
         "bbox": bbox,
         "platform": "simulation",
         "polarization": "VV (synthetic)",
@@ -421,7 +412,7 @@ def offline_synthetic_practice(selection: OfflinePracticeRequest) -> dict[str, A
             source_lon=selection.source_longitude,
             source_lat=selection.source_latitude,
             acquired_at=acquired_at,
-            scene_source={"provider": "WakeTrace synthetic practice generator", "dataset": scene["dataset"],
+            scene_source={"provider": "OceanTrace synthetic practice generator", "dataset": scene["dataset"],
                           "product_id": scene["id"]},
             polarization="VV",
             seed=selection.seed,
@@ -439,7 +430,7 @@ def _run_real_drift(selection: DriftSelection) -> dict[str, Any]:
     observed = datetime.fromisoformat(selection.acquired_at.replace("Z", "+00:00"))
     if observed.tzinfo is None or observed.utcoffset() != timezone.utc.utcoffset(observed):
         raise DriftInputError("Observation time must include UTC (Z).")
-    with tempfile.TemporaryDirectory(prefix="waketrace-forcing-") as directory:
+    with tempfile.TemporaryDirectory(prefix="oceantrace-forcing-") as directory:
         readers, sources = fetch_readers(
             geometry=selection.geometry,
             observed_at=observed,

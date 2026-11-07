@@ -1,13 +1,13 @@
 const $ = (id) => document.getElementById(id);
 
-WakeTraceCase.load()
+OceanTraceCase.load()
   .then((caseData) => {
     const detection = caseData.detection || {};
     const drift = caseData.drift || {};
-    WakeTraceCase.markSynthetic(caseData);
+    OceanTraceCase.markSynthetic(caseData);
     $("case-title").textContent = caseData.title || caseData.case_id || "Untitled case";
-    $("case-subtitle").textContent = "Case " + (caseData.case_id || "ID unavailable") + " · Observation " + WakeTraceCase.formatUtc(detection.acquired_at);
-    $("overview-observed").textContent = WakeTraceCase.formatUtc(detection.acquired_at);
+    $("case-subtitle").textContent = "Case " + (caseData.case_id || "ID unavailable") + " · Observation " + OceanTraceCase.formatUtc(detection.acquired_at);
+    $("overview-observed").textContent = OceanTraceCase.formatUtc(detection.acquired_at);
     const candidateCount = Array.isArray(detection.candidates) ? detection.candidates.length : 0;
     $("overview-confidence").textContent = candidateCount
       ? candidateCount + " dark-feature candidate(s) · review required"

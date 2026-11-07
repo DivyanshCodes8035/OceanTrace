@@ -68,9 +68,6 @@ function apiRoot() {
   if (configuredPort && /^\d{1,5}$/.test(configuredPort) && Number(configuredPort) <= 65535) {
     return window.location.protocol + "//" + (window.location.hostname || "localhost") + ":" + configuredPort;
   }
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return window.location.protocol + "//" + window.location.hostname + ":8002";
-  }
   return window.location.origin;
 }
 
@@ -342,16 +339,16 @@ if (!hasMapLibrary) {
   window.addEventListener("resize", () => map.invalidateSize());
 }
 
-WakeTraceCase.load()
+OceanTraceCase.load()
   .then((caseData) => {
-    WakeTraceCase.markSynthetic(caseData);
+    OceanTraceCase.markSynthetic(caseData);
     const detection = caseData.detection || {};
-    document.title = "WakeTrace | Map | " + (caseData.title || caseData.case_id || "Case");
+    document.title = "OceanTrace | Map | " + (caseData.title || caseData.case_id || "Case");
     $("case-title").textContent = caseData.title || caseData.case_id || "Untitled case";
-    $("case-subtitle").textContent = "Observation · " + WakeTraceCase.formatUtc(detection.acquired_at);
+    $("case-subtitle").textContent = "Observation · " + OceanTraceCase.formatUtc(detection.acquired_at);
     const inputSource = detection.provenance?.input_sources?.[0] || {};
     $("scene-source").textContent = [inputSource.provider, inputSource.dataset].filter(Boolean).join(" · ") || detection.source || "Source not recorded";
-    $("scene-acquired").textContent = "Acquired · " + WakeTraceCase.formatUtc(detection.acquired_at);
+    $("scene-acquired").textContent = "Acquired · " + OceanTraceCase.formatUtc(detection.acquired_at);
     if (detection.preview_url) {
       $("scene-preview").src = detection.preview_url;
       $("scene-preview").hidden = false;
@@ -387,7 +384,7 @@ WakeTraceCase.load()
   });
 
 const searchForm = $("scene-search-form");
-const savedCoordinatesKey = "waketrace.map-search-coordinates.v1";
+const savedCoordinatesKey = "oceantrace.map-search-coordinates.v1";
 const coordinateFields = ["west", "south", "east", "north"];
 const coordinateSaveStatus = $("coordinate-save-status");
 
@@ -409,7 +406,7 @@ function saveSearchCoordinates() {
     const values = Object.fromEntries(coordinateFields.map((name) => [name, searchForm.elements[name].value]));
     if (coordinateFields.every((name) => values[name] === "")) {
       localStorage.removeItem(savedCoordinatesKey);
-      coordinateSaveStatus.textContent = "Enter coordinates and WakeTrace will save them on this device.";
+      coordinateSaveStatus.textContent = "Enter coordinates and OceanTrace will save them on this device.";
       return;
     }
     localStorage.setItem(savedCoordinatesKey, JSON.stringify(values));
@@ -516,7 +513,7 @@ searchForm.addEventListener("submit", async (event) => {
       const details = document.createElement("div");
       details.append(
         textNode("strong", (scene.platform || "Sentinel-1").toUpperCase() + " radar image", "scene-title"),
-        textNode("span", [scene.datetime ? WakeTraceCase.formatUtc(scene.datetime) : "Time unavailable", scene.platform, scene.mode, scene.orbit, (scene.polarizations || []).join("/")].filter(Boolean).join(" · ")),
+        textNode("span", [scene.datetime ? OceanTraceCase.formatUtc(scene.datetime) : "Time unavailable", scene.platform, scene.mode, scene.orbit, (scene.polarizations || []).join("/")].filter(Boolean).join(" · ")),
         textNode("span", "Product ID · " + (scene.id || "Unavailable"), "scene-product-id"),
       );
       const select = textNode("button", "Show image + screen", "scene-select-button");
@@ -534,7 +531,7 @@ searchForm.addEventListener("submit", async (event) => {
       results.querySelector(".scene-select-button")?.click();
     }
   } catch (error) {
-    status.textContent = error.message + " Check that the WakeTrace API is running.";
+    status.textContent = error.message + " Check that the OceanTrace API is running.";
   } finally {
     button.disabled = false;
   }
@@ -604,19 +601,19 @@ async function showScene(scene, form, status, button) {
     }
     $("scene-source").textContent = result.scene.source + " · " + result.scene.id;
     $("scene-kind").textContent = "SATELLITE SCENE";
-    $("scene-acquired").textContent = "Acquired · " + WakeTraceCase.formatUtc(result.scene.datetime);
+    $("scene-acquired").textContent = "Acquired · " + OceanTraceCase.formatUtc(result.scene.datetime);
     $("scene-preview").src = result.preview.preview_url;
     $("scene-preview").hidden = false;
     $("scene-preview-status").hidden = true;
     $("case-badge").textContent = "LIVE COPERNICUS SCENE";
     $("case-badge").classList.add("real-case-badge");
     $("case-title").textContent = "Sentinel-1 scene review";
-    $("case-subtitle").textContent = "Real radar observation · " + WakeTraceCase.formatUtc(result.scene.datetime);
+    $("case-subtitle").textContent = "Real radar observation · " + OceanTraceCase.formatUtc(result.scene.datetime);
     $("case-notice").textContent = result.note;
     $("case-notice").hidden = false;
     window.realCaseData = {
       case_id: "review-" + Date.now(),
-      title: "Sentinel-1 review · " + WakeTraceCase.formatUtc(result.scene.datetime),
+      title: "Sentinel-1 review · " + OceanTraceCase.formatUtc(result.scene.datetime),
       synthetic: false,
       detection: {
         source: result.detection.source,
@@ -706,7 +703,7 @@ async function showScene(scene, form, status, button) {
     } catch (fallbackError) {
       status.textContent = error.message;
       const message = $("map-message");
-      message.replaceChildren(document.createTextNode("WakeTrace cannot load the image service right now. " + fallbackError.message + " Open the same real Sentinel-1 date and location in Copernicus Browser instead: "));
+      message.replaceChildren(document.createTextNode("OceanTrace cannot load the image service right now. " + fallbackError.message + " Open the same real Sentinel-1 date and location in Copernicus Browser instead: "));
       addCopernicusBrowserLink(message, scene, form.elements.polarization.value, "Open real Sentinel-1 scene");
       $("map-message").hidden = false;
     }
@@ -739,7 +736,7 @@ async function showCatalogQuicklook(scene, form, status, processingError) {
   const acquired = scene.datetime || scene.start_datetime;
   $("scene-source").textContent = "Copernicus Data Space · " + scene.id;
   $("scene-kind").textContent = "SENTINEL-1 QUICKLOOK";
-  $("scene-acquired").textContent = "Acquired · " + WakeTraceCase.formatUtc(acquired);
+  $("scene-acquired").textContent = "Acquired · " + OceanTraceCase.formatUtc(acquired);
   $("scene-preview").src = scene.item_url;
   $("scene-preview").alt = "Copernicus Sentinel-1 radar quicklook for " + scene.id;
   $("scene-preview").hidden = false;
@@ -747,7 +744,7 @@ async function showCatalogQuicklook(scene, form, status, processingError) {
   $("case-badge").textContent = "LIVE COPERNICUS SCENE";
   $("case-badge").classList.add("real-case-badge");
   $("case-title").textContent = "Sentinel-1 scene review";
-  $("case-subtitle").textContent = "Real radar observation · " + WakeTraceCase.formatUtc(acquired);
+  $("case-subtitle").textContent = "Real radar observation · " + OceanTraceCase.formatUtc(acquired);
   $("case-notice").textContent = "Real Copernicus radar quicklook shown. Automatic slick screening and pixel-level analysis did not run because the image-processing service is unavailable. This preview alone does not confirm oil.";
   $("case-notice").hidden = false;
   $("real-detection-results").hidden = true;
@@ -795,8 +792,8 @@ async function estimateRealDrift(candidate, button) {
     if (window.realOriginLayer) layers.removeLayer(window.realOriginLayer);
     window.realOriginLayer = L.geoJSON(result.drift.origin_zone, { style: colors.origin }).bindPopup("Possible origin area · uncertain model result").addTo(layers);
     $("legend-origin").hidden = false;
-    const start = WakeTraceCase.formatUtc(result.drift.release_window.start);
-    const end = WakeTraceCase.formatUtc(result.drift.release_window.end);
+    const start = OceanTraceCase.formatUtc(result.drift.release_window.start);
+    const end = OceanTraceCase.formatUtc(result.drift.release_window.end);
     $("real-drift-title").textContent = "Possible origin area · " + result.drift.ensemble_size + " particles";
     $("real-drift-text").textContent = "OpenDrift backtracked this selected radar feature to an uncertain possible origin area. Search window: " + start + " to " + end + ". " + result.drift.uncertainty_note;
     $("real-drift-sources").textContent = "Real data used: " + result.drift.provenance.input_sources.map((source) => source.product + " (" + source.dataset + ")").join(" and ") + ". The release window is the model search period, not a measured spill time.";
@@ -861,7 +858,7 @@ async function searchAutomaticAISPresence(drift) {
     if (result.presence_cells.length) {
       status.textContent = result.presence_cells.length + " AIS presence cell(s) returned by Global Fishing Watch. " + result.note;
     } else if (result.provenance?.upstream_entries_received > 0 && result.provenance?.upstream_coordinate_rows_received === 0) {
-      status.textContent = "Global Fishing Watch returned report entries, but WakeTrace could not read their map coordinates. Refresh the backend before retrying. " + result.note;
+      status.textContent = "Global Fishing Watch returned report entries, but OceanTrace could not read their map coordinates. Refresh the backend before retrying. " + result.note;
     } else {
       status.textContent = "Global Fishing Watch returned no AIS presence rows for this area and date range. That does not prove vessels were absent. " + result.note;
     }
@@ -948,7 +945,7 @@ $("save-real-case").addEventListener("click", async () => {
   const status = $("save-case-status");
   button.disabled = true;
   status.hidden = false;
-  status.textContent = "Saving this review in the WakeTrace project…";
+  status.textContent = "Saving this review in the OceanTrace project…";
   try {
     const response = await fetch(apiRoot() + "/api/cases", {
       method: "POST",
@@ -957,7 +954,7 @@ $("save-real-case").addEventListener("click", async () => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || "Could not save this case.");
-    status.textContent = "Saved in the WakeTrace project.";
+    status.textContent = "Saved in the OceanTrace project.";
     const url = new URL(window.location.href);
     url.searchParams.set("case", result.case_id);
     window.history.replaceState({}, "", url);
@@ -1039,7 +1036,7 @@ $("run-simulation").addEventListener("click", async () => {
     $("legend-scene").lastChild.textContent = isOfflinePractice ? "Synthetic radar-style background" : "Copernicus Sentinel-1 scene";
     $("scene-source").textContent = result.scene.source + " · " + result.scene.id;
     $("scene-kind").textContent = isOfflinePractice ? "SYNTHETIC PRACTICE BACKGROUND" : "SATELLITE SCENE";
-    $("scene-acquired").textContent = (isOfflinePractice ? "Generated · " : "Acquired · ") + WakeTraceCase.formatUtc(result.scene.datetime);
+    $("scene-acquired").textContent = (isOfflinePractice ? "Generated · " : "Acquired · ") + OceanTraceCase.formatUtc(result.scene.datetime);
     $("scene-preview").src = result.preview.preview_url;
     $("scene-preview").alt = isOfflinePractice ? "Generated synthetic radar-style practice image; not satellite data" : "Satellite scene preview attached to this case";
     $("scene-preview").hidden = false;
@@ -1059,7 +1056,7 @@ $("run-simulation").addEventListener("click", async () => {
     $("simulation-step").hidden = false;
     $("map-description").textContent = "Step 1 · full-scene view, then a close-up of the synthetic patch";
     $("simulation-step-title").textContent = "Full-scene radar overview";
-    $("simulation-step-copy").textContent = "A generated Sentinel-1-style radar view is shown first. In two seconds, WakeTrace zooms to the planted practice patch. This is not actual satellite imagery.";
+    $("simulation-step-copy").textContent = "A generated Sentinel-1-style radar view is shown first. In two seconds, OceanTrace zooms to the planted practice patch. This is not actual satellite imagery.";
     $("simulation-step-count").textContent = "";
     $("show-vessel-matches").disabled = true;
     $("show-vessel-matches").textContent = "Zooming to patch…";

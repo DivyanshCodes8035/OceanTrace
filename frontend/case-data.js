@@ -5,7 +5,7 @@
     ? "/api/cases/" + encodeURIComponent(requestedCase)
     : new URL("demo-case.json", window.location.href);
 
-  window.WakeTraceCase = {
+  window.OceanTraceCase = {
     load: () => {
       return fetch(caseUrl).then((response) => {
       if (!response.ok) throw new Error("Could not load case data (" + response.status + ")");
@@ -43,7 +43,7 @@
           : "Review source provenance and uncertainty before interpreting this case.";
         notice.hidden = false;
       }
-      document.title = "WakeTrace | " + (caseData.title || caseData.case_id || "Case review");
+      document.title = "OceanTrace | " + (caseData.title || caseData.case_id || "Case review");
       this.markCaseLinks(caseData);
       return synthetic;
     },

@@ -1,4 +1,4 @@
-/* WakeTrace guided simulation v2 (loads after styles.css). Remove this file + guided-demo.js to go back to the classic page. */
+/* OceanTrace guided simulation v2 (loads after styles.css). Remove this file + guided-demo.js to go back to the classic page. */
 :root { --g-teal: #5fd6c8; --g-amber: #ffb15e; --g-coral: #ff6b5e; --g-glass: rgb(7 22 33 / 86%); }
 .guided-layout { display: flex; flex: 1; min-width: 0; }
 .guided-side { display: none; }

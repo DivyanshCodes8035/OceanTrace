@@ -51,7 +51,7 @@ def fetch_readers(
     if not has_environment_credentials and not any(path.is_file() for path in credential_files):
         raise RuntimeError(
             "Copernicus Marine is not logged in for this computer. From the backend folder, "
-            "run `copernicusmarine login` once, finish the login in that terminal, then restart WakeTrace."
+            "run `copernicusmarine login` once, finish the login in that terminal, then restart OceanTrace."
         )
 
     coordinates = geometry.get("coordinates") or []

@@ -222,7 +222,7 @@ def run_simulated_spill(
     observed = observed.astimezone(timezone.utc)
 
     duration_hours = 6
-    offline_practice = scene_source.get("provider") == "WakeTrace synthetic practice generator"
+    offline_practice = scene_source.get("provider") == "OceanTrace synthetic practice generator"
     eastward_current_m_s = 0.36 if offline_practice else 0.12
     northward_current_m_s = 0.12 if offline_practice else 0.03
     elapsed = duration_hours * 3600
@@ -295,7 +295,7 @@ def run_simulated_spill(
                                         -northward_current_m_s * elapsed)
                        if detected_center else None)
     drift = {
-        "model": "WakeTrace synthetic constant-current particle demonstration",
+        "model": "OceanTrace synthetic constant-current particle demonstration",
         "release_window": {"start": start.isoformat().replace("+00:00", "Z"),
                            "end": observed.isoformat().replace("+00:00", "Z")},
         "origin_zone": _particle_zone(estimated_source[0], estimated_source[1], seed) if estimated_source else None,

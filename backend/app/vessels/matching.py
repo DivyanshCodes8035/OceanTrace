@@ -1,4 +1,4 @@
-"""Explainable AIS screening against a WakeTrace drift origin and release window.
+"""Explainable AIS screening against a OceanTrace drift origin and release window.
 
 This is a coarse candidate-ranking aid. It is not a probability of responsibility
 and does not compare AIS tracks to time-varying particle trajectories.

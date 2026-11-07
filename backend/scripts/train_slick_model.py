@@ -1,4 +1,4 @@
-"""Train and evaluate the experimental WakeTrace Sentinel-1 slick screen."""
+"""Train and evaluate the experimental OceanTrace Sentinel-1 slick screen."""
 from __future__ import annotations
 
 import argparse
@@ -100,7 +100,7 @@ def main():
     checkpoint = torch.load(WEIGHTS, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state"])
     report = {
-        "model": "WakeTrace experimental Sentinel-1 slick-like TinyUNet v1",
+        "model": "OceanTrace experimental Sentinel-1 slick-like TinyUNet v1",
         "architecture": "Two-class TinyUNet, base_ch=8, 300x400 inputs",
         "dataset": "Garcia et al. (2026), INPE Oil Spill Segmentation Dataset, CC BY 4.0, https://github.com/Garcia-INPE/oilspill-detection-dataset",
         "split_counts": {"train": len(train), "validation": len(val), "test": len(test)},

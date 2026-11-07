@@ -1,10 +1,10 @@
-# WakeTrace experimental SAR slick-like segmentation model
+# OceanTrace experimental SAR slick-like segmentation model
 
 ## Model and intended use
 
 The oil_slick_tinyunet_v1.pt checkpoint is a two-class U-Net trained to highlight Sentinel-1 SAR textures resembling the slick labels in the INPE Oil Spill Segmentation Dataset. It is an experimental review aid. A model score is not a probability, an oil confirmation, or a vessel attribution.
 
-The model runs alongside WakeTrace's rule-based dark-feature screen. It draws separate violet outlines. Analysts should compare both screens with the underlying radar, wind and current context, and source-backed AIS evidence.
+The model runs alongside OceanTrace's rule-based dark-feature screen. It draws separate violet outlines. Analysts should compare both screens with the underlying radar, wind and current context, and source-backed AIS evidence.
 
 ## Training data and attribution
 
